@@ -524,14 +524,18 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`  → Terminal via WebSocket ativo`);
   console.log(`  → 🗄  SQLite: ${DB_PATH}`);
 
-  // Auto-start Ollama
-  const ollamaRunning = await checkOllama();
-  if (ollamaRunning) {
-    console.log(`  → 🤖 Ollama: rodando`);
+  // Auto-start Ollama (skip if DISABLE_OLLAMA is set, e.g. on Render)
+  if (process.env.DISABLE_OLLAMA) {
+    console.log(`  → 🤖 Ollama: desabilitado`);
   } else {
-    console.log(`  → 🤖 Ollama: iniciando...`);
-    const started = await startOllama();
-    console.log(`  → 🤖 Ollama: ${started ? 'iniciado!' : 'nao encontrado'}`);
+    const ollamaRunning = await checkOllama();
+    if (ollamaRunning) {
+      console.log(`  → 🤖 Ollama: rodando`);
+    } else {
+      console.log(`  → 🤖 Ollama: iniciando...`);
+      const started = await startOllama();
+      console.log(`  → 🤖 Ollama: ${started ? 'iniciado!' : 'nao encontrado'}`);
+    }
   }
   console.log();
 });
