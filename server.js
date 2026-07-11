@@ -115,11 +115,13 @@ function startOllama() {
           detached: true,
           env: { ...process.env },
         });
+        ollamaProcess.on('error', () => {});
         ollamaProcess.unref();
         ollamaCmd = cmd;
         break;
       } catch { continue; }
     }
+    if (!ollamaProcess) { resolve(false); return; }
 
     // Wait for Ollama to be ready
     let attempts = 0;
