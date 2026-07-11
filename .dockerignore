@@ -1,0 +1,7 @@
+node_modules/.cache
+dist-electron
+dist
+.git
+*.md
+.DS_Store
+builds/

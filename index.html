@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Central Pessoal — Seu hub futurista de produtividade com notas, links, notícias e mais.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#000000">
+  <title>Central Pessoal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div id="loading-overlay"></div>
+    <div id="loading-content">
+      <div id="loading-terminal">
+        <div id="loading-header">
+          <div class="loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="loading-header-text">SYSTEM BOOT v3.0</span>
+        </div>
+        <div id="loading-lines"></div>
+        <div id="loading-progress-bar">
+          <div id="loading-progress-fill"></div>
+        </div>
+        <div id="loading-status">INITIALIZING...</div>
+      </div>
+      <canvas id="loading-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app">
+    <button id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <aside id="sidebar">
+      <div id="brand">
+        <div id="brand-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <defs>
+              <linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="100%" stop-color="#888888"/>
+              </linearGradient>
+            </defs>
+            <rect width="32" height="32" rx="8" fill="url(#brand-grad)" opacity="0.15"/>
+            <path d="M16 6L26 12V20L16 26L6 20V12L16 6Z" stroke="url(#brand-grad)" stroke-width="1.5" fill="none"/>
+            <circle cx="16" cy="16" r="4" fill="url(#brand-grad)" opacity="0.6"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Central</h1>
+          <p>Pessoal</p>
+        </div>
+      </div>
+      <div id="search-box">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="search-input" type="text" placeholder="Buscar... (Ctrl+K)" spellcheck="false">
+        <div id="search-results"></div>
+      </div>
+      <nav id="nav">
+        <button class="nav-btn active" data-module="dashboard" id="nav-dashboard">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Início</span>
+        </button>
+        <button class="nav-btn" data-module="news" id="nav-news">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>
+          <span>Notícias</span>
+        </button>
+        <button class="nav-btn" data-module="notes" id="nav-notes">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Notas</span>
+        </button>
+        <button class="nav-btn" data-module="todo" id="nav-todo">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          <span>Tarefas</span>
+        </button>
+        <button class="nav-btn" data-module="calendar" id="nav-calendar">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Agenda</span>
+        </button>
+        <button class="nav-btn" data-module="links" id="nav-links">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          <span>Links</span>
+        </button>
+        <button class="nav-btn" data-module="habits" id="nav-habits">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Hábitos</span>
+        </button>
+        <button class="nav-btn" data-module="pomodoro" id="nav-pomodoro">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Pomodoro</span>
+        </button>
+        <button class="nav-btn" data-module="terminal" id="nav-terminal">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span>Terminal</span>
+        </button>
+        <button class="nav-btn" data-module="player" id="nav-player">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span>Ambiente</span>
+        </button>
+        <button class="nav-btn" data-module="game" id="nav-game">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span>Jogo</span>
+        </button>
+        <button class="nav-btn" data-module="leitura" id="nav-leitura">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Leitura</span>
+        </button>
+        <button class="nav-btn" data-module="ai" id="nav-ai">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
+          <span>IA</span>
+        </button>
+      </nav>
+      <div id="sidebar-footer">
+        <div id="status-indicator">
+          <div id="status-dot"></div>
+          <div id="status-ring"></div>
+        </div>
+        <span id="status-text">ONLINE</span>
+        <button id="btn-fullscreen" class="footer-btn" title="Tela cheia">
+          <svg id="fs-icon-enter" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <svg id="fs-icon-exit" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="10" y1="14" x2="3" y2="21"/></svg>
+        </button>
+        <button id="btn-theme" class="footer-btn" title="Alternar tema">
+          <svg id="theme-icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg id="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+        <button id="btn-settings" class="footer-btn" title="Configurações">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <main id="content">
+      <!-- Dashboard / Menu Inicial -->
+      <section id="mod-dashboard" class="module active">
+        <div id="dashboard-hero">
+          <div id="greeting">
+            <span id="greeting-text">Bem-vindo</span>
+            <span id="greeting-time"><span id="clock-time">--:--</span></span>
+          </div>
+          <p id="greeting-sub">O que você quer fazer hoje?</p>
+        </div>
+
+        <div id="menu-grid">
+          <button class="menu-card" data-module="news" id="card-news">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Notícias</span>
+              <span class="menu-card-desc">Últimas atualizações do mundo</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="notes" id="card-notes">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Notas</span>
+              <span class="menu-card-desc">Suas anotações pessoais</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="todo" id="card-todo">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Tarefas</span>
+              <span class="menu-card-desc">Lista de afazeres</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="calendar" id="card-calendar">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Agenda</span>
+              <span class="menu-card-desc">Calendário e eventos</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="links" id="card-links">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Links</span>
+              <span class="menu-card-desc">Atalhos e favoritos</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="pomodoro" id="card-pomodoro">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Pomodoro</span>
+              <span class="menu-card-desc">Timer de produtividade</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="habits" id="card-habits">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Hábitos</span>
+              <span class="menu-card-desc">Acompanhamento diário</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="terminal" id="card-terminal">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Terminal</span>
+              <span class="menu-card-desc">Linha de comando integrada</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="player" id="card-player">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Ambiente</span>
+              <span class="menu-card-desc">Sons para concentração</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="ai" id="card-ai">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">IA Local</span>
+              <span class="menu-card-desc">Inteligência artificial offline</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" data-module="game" id="card-game">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <div class="menu-card-content">
+              <span class="menu-card-title">Jogo</span>
+              <span class="menu-card-desc">RPG de gerenciamento</span>
+            </div>
+            <span class="menu-card-arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+
+          <button class="menu-card" id="card-weather">
+            <div class="menu-card-glow"></div>
+            <div class="menu-card-icon" id="weather-icon">◌</div>
+            <div class="menu-card-content">
+              <span class="menu-card-title" id="weather-temp">--°C</span>
+              <span class="menu-card-desc" id="weather-desc">---</span>
+            </div>
+            <span class="menu-card-city" id="weather-city">---</span>
+          </button>
+        </div>
+
+        <div id="weather-forecast"></div>
+
+        <div id="dashboard-footer">
+          <div class="dash-stat">
+            <span class="dash-stat-value" id="stat-notes">0</span>
+            <span class="dash-stat-label">Notas</span>
+          </div>
+          <div class="dash-stat">
+            <span class="dash-stat-value" id="stat-todo">0</span>
+            <span class="dash-stat-label">Tarefas</span>
+          </div>
+          <div class="dash-stat">
+            <span class="dash-stat-value" id="stat-pomo">0</span>
+            <span class="dash-stat-label">Sessões</span>
+          </div>
+          <div class="dash-stat">
+            <span class="dash-stat-value" id="stat-links">0</span>
+            <span class="dash-stat-label">Links</span>
+          </div>
+          <div class="dash-stat">
+            <span class="dash-stat-value" id="clock-date">---</span>
+            <span class="dash-stat-label">Data</span>
+          </div>
+        </div>
+        <div id="backup-bar">
+          <button id="btn-export" class="btn-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            EXPORTAR
+          </button>
+          <button id="btn-import" class="btn-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            IMPORTAR
+          </button>
+          <input id="import-input" type="file" accept=".json" hidden>
+        </div>
+      </section>
+
+      <!-- Notícias -->
+      <section id="mod-news" class="module">
+        <div class="module-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>
+            Notícias
+          </h2>
+          <button id="news-refresh" class="btn-icon" title="Atualizar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          </button>
+        </div>
+        <div id="news-container">
+          <div id="news-list"></div>
+          <div id="news-loading">CARREGANDO...</div>
+        </div>
+      </section>
+
+      <!-- Notas -->
+      <section id="mod-notes" class="module">
+        <div class="module-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Notas
+          </h2>
+          <button id="notes-add" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            NOVA NOTA
+          </button>
+        </div>
+        <div id="notes-container"></div>
+      </section>
+
+      <!-- Tarefas -->
+      <section id="mod-todo" class="module">
+        <div class="module-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            Tarefas
+          </h2>
+        </div>
+        <div id="todo-input-line">
+          <input id="todo-input" type="text" placeholder="Nova tarefa..." autofocus>
+          <button id="todo-voice-btn" class="voice-btn" title="Dictar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </button>
+          <button id="todo-add-btn" class="btn-primary">ADICIONAR</button>
+        </div>
+        <div id="todo-list"></div>
+      </section>
+
+      <!-- Links -->
+      <section id="mod-links" class="module">
+        <div class="module-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            Links
+          </h2>
+          <button id="links-add" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            NOVO LINK
+          </button>
+        </div>
+        <div id="links-container"></div>
+      </section>
+
+      <!-- Hábitos -->
+      <section id="mod-habits" class="module">
+        <div class="module-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Hábitos
+          </h2>
+        </div>
+        <div id="habits-input-line">
+          <select id="habit-icon" class="habits-icon-select">
+            <option>○</option><option>●</option><option>★</option><option>◆</option><option>▲</option><option>♥</option><option>♦</option><option>✓</option><option>✗</option><option>⚡</option><option>☕</option><option>📚</option><option>💪</option><option>🧠</option><option>🏃</option><option>💧</option><option>🥗</option><option>🎯</option><option>🧘</option><option>🎵</option>
+          </select>
+          <input id="habit-input" type="text" placeholder="Novo hábito..." spellcheck="false">
+          <button id="habit-add-btn" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            ADICIONAR
+          </button>
+        </div>
+        <div id="habits-container"></div>
+      </section>
+
+      <!-- Agenda -->
+      <section id="mod-calendar" class="module">
+        <div class="module-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Agenda
+          </h2>
+          <div id="cal-nav">
+            <button id="cal-today" class="btn-secondary" style="padding:8px 14px;font-size:11px">HOJE</button>
+            <button id="cal-prev" class="btn-icon" style="padding:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <button id="cal-next" class="btn-icon" style="padding:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+          </div>
+        </div>
+        <div id="cal-header">
+          <span id="cal-title">Mês Ano</span>
+        </div>
+        <div id="cal-grid"></div>
+      </section>
+
+      <!-- Pomodoro -->
+      <section id="mod-pomodoro" class="module">
+        <div class="module-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Pomodoro
+          </h2>
+          <span id="pomo-sessions" style="font-size:11px;color:var(--text-tertiary);letter-spacing:1px">0 sessões</span>
+        </div>
+        <div id="pomo-body">
+          <div id="pomo-modes">
+            <button class="pomo-mode-btn active" id="pomo-focus">Foco</button>
+            <button class="pomo-mode-btn" id="pomo-short">Pausa</button>
+            <button class="pomo-mode-btn" id="pomo-long">Longa</button>
+          </div>
+          <div id="pomo-time">25:00</div>
+          <div id="pomo-controls">
+            <button id="pomo-toggle" class="btn-primary" style="font-size:15px;padding:16px 48px;letter-spacing:2px">INICIAR</button>
+            <button id="pomo-reset" class="btn-secondary" style="padding:16px 24px">REINICIAR</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Terminal -->
+      <section id="mod-terminal" class="module"></section>
+
+      <!-- Player Ambiente -->
+      <section id="mod-player" class="module">
+      </section>
+
+      <!-- IA -->
+      <section id="mod-ai" class="module">
+        <div class="module-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
+            IA Local
+          </h2>
+        </div>
+        <div id="ai-placeholder">
+          <div class="placeholder-icon-wrap">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
+          </div>
+          <p>IA LOCAL</p>
+          <span class="placeholder-sub">Preparado para Ollama</span>
+        </div>
+      </section>
+
+      <!-- Jogo -->
+      <section id="mod-game" class="module">
+      </section>
+
+      <!-- Leitura -->
+      <section id="mod-leitura" class="module">
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal-box">
+      <div id="modal-header">
+        <h3 id="modal-title">Título</h3>
+        <button id="modal-close" class="btn-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="modal-body"></div>
+      <div id="modal-footer">
+        <button id="modal-cancel" class="btn-secondary">CANCELAR</button>
+        <button id="modal-confirm" class="btn-primary">CONFIRMAR</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="debug-overlay" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#111;color:#f44;padding:12px;font:11px monospace;z-index:99999;max-height:200px;overflow:auto;border-top:2px solid #f44"></div>
+  <script>window.addEventListener('error',function(e){var d=document.getElementById('debug-overlay');if(d){d.style.display='block';d.innerHTML+='<div>🚨 '+e.message.replace(/</g,'&lt;')+' at '+e.filename+':'+e.lineno+'</div>';}});window.addEventListener('unhandledrejection',function(e){var d=document.getElementById('debug-overlay');if(d){d.style.display='block';d.innerHTML+='<div>⚠️ Promise: '+(e.reason||'unknown').toString().replace(/</g,'&lt;')+'</div>';}});</script>
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <script src="js/data.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/modules/settings.js"></script>
+  <script src="js/modules/clock.js"></script>
+  <script src="js/modules/news.js"></script>
+  <script src="js/modules/notes.js"></script>
+  <script src="js/modules/todo.js"></script>
+  <script src="js/modules/calendar.js"></script>
+  <script src="js/modules/pomodoro.js"></script>
+  <script src="js/modules/links.js"></script>
+  <script src="js/modules/habits.js"></script>
+  <script src="js/modules/terminal.js"></script>
+  <script src="js/modules/player.js"></script>
+  <script src="js/modules/ai.js"></script>
+  <script src="js/modules/game.js"></script>
+  <script src="js/modules/leitura.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

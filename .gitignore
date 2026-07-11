@@ -1,0 +1,9 @@
+node_modules/
+dist-electron/
+dist/
+builds/
+*.db
+*.db-shm
+*.db-wal
+.env
+.DS_Store

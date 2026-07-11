@@ -1,0 +1,55 @@
+{
+  "name": "central-pessoal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Central Pessoal — Sua central pessoal futurista",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node server.js",
+    "terminal": "node server.js",
+    "electron": "electron .",
+    "build:exe": "npx electron-builder --win --x64 --publish never",
+    "build:exe:simple": "npx @electron/packager . CentralPessoal --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "railway": {
+    "build": "DOCKERFILE",
+    "deploy": {
+      "numReplicas": 1,
+      "sleepApplication": false,
+      "restartPolicyType": "ALWAYS"
+    }
+  },
+  "build": {
+    "appId": "com.centralpessoal.app",
+    "productName": "Central Pessoal",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist",
+      "!node_modules/.cache"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "favicon.svg"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@electron/packager": "^18.4.4",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.0.0"
+  }
+}
