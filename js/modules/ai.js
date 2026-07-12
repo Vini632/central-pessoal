@@ -75,6 +75,7 @@ const AI = {
         <div id="ai-conv-list"><div class="ai-conv-title">Conversas</div></div>
         <div id="ai-chat">
           <div id="ai-messages"></div>
+          <div id="ai-memory-status"></div>
           <div id="ai-attachments"></div>
           <div id="ai-input-line">
             <button id="ai-file-btn" class="btn-icon" title="Anexar arquivo" style="padding:8px">
@@ -141,8 +142,8 @@ const AI = {
         this.conversations = saved;
         // Clean up old single-message format
         this.conversations = this.conversations.filter(c => c && c.id);
-        // Ensure every conv has messages array
-        this.conversations.forEach(c => { if (!c.messages) c.messages = []; });
+        // Ensure every conv has messages array and memories field
+        this.conversations.forEach(c => { if (!c.messages) c.messages = []; if (!c.memories) c.memories = ''; });
       } else {
         // Migrate old messages
         const oldMsgs = Data.get('central_ai_messages') || [];
@@ -169,7 +170,7 @@ const AI = {
   newChat() {
     const id = 'conv_' + Date.now().toString(36);
     this.conversations.push({
-      id, title: 'Conversa ' + (this.conversations.length + 1), messages: [], created: Date.now(), updated: Date.now(),
+      id, title: 'Conversa ' + (this.conversations.length + 1), messages: [], memories: '', created: Date.now(), updated: Date.now(),
     });
     this.currentId = id;
     this.saveConversations();
@@ -243,6 +244,16 @@ const AI = {
     }
     this.input.disabled = false;
     this.sendBtn.disabled = false;
+
+    // Show memory indicator
+    const memIndicator = document.getElementById('ai-memory-status');
+    if (conv.memories) {
+      memIndicator.textContent = '🧠 ' + conv.memories.split('\n').length + ' linhas';
+      memIndicator.style.display = 'block';
+    } else if (memIndicator) {
+      memIndicator.style.display = 'none';
+    }
+
     conv.messages.forEach(m => {
       if (m.role === 'system') this.addSystem(m.content, false);
       else this.addMessage(m.role, m.content, false);
@@ -431,8 +442,11 @@ const AI = {
     console.log('AI.send() text:', JSON.stringify(text), 'conv:', !!conv, 'attachments:', this.attachments.length);
     if ((!text && this.attachments.length === 0) || !conv) { console.log('AI.send(): early return'); return; }
 
-    // Build prompt with attachments
+    // Build prompt with attachments and memory
     let prompt = text;
+    if (conv.memories) {
+      prompt = `[MEMÓRIA DA CONVERSA]\n${conv.memories}\n[/MEMÓRIA]\n\n${text}`;
+    }
     if (this.attachments.length > 0) {
       const parts = [text];
       for (const a of this.attachments) {
@@ -497,6 +511,13 @@ const AI = {
       }
 
       if (!fullResponse) throw new Error('Resposta vazia');
+
+      // Extract memory updates from response
+      const memMatch = fullResponse.match(/\[ATUALIZAR MEMÓRIA\]([\s\S]*?)\[\/ATUALIZAR MEMÓRIA\]/);
+      if (memMatch) {
+        conv.memories = memMatch[1].trim();
+        fullResponse = fullResponse.replace(/\[ATUALIZAR MEMÓRIA\][\s\S]*?\[\/ATUALIZAR MEMÓRIA\]/g, '').trim();
+      }
 
       contentEl.innerHTML = this.renderMarkdown(fullResponse);
       conv.messages.push({ role: 'assistant', content: fullResponse, timestamp: Date.now() });
