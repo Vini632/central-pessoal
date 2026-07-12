@@ -1,4 +1,4 @@
-const CACHE = 'central-v2';
+const CACHE = 'central-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -53,17 +53,17 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Static assets: cache first
+  // Static assets: network first, cache as fallback
   e.respondWith(
-    caches.match(e.request).then((cached) => {
+    fetch(e.request).then((res) => {
+      if (res.ok && res.type === 'basic') {
+        const clone = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request).then((cached) => {
       if (cached) return cached;
-      return fetch(e.request).then((res) => {
-        if (res.ok && res.type === 'basic') {
-          const clone = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => new Response('Offline', { status: 503 }));
-    })
+      return new Response('Offline', { status: 503 });
+    }))
   );
 });

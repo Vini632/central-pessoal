@@ -7,3 +7,4 @@ builds/
 *.db-wal
 .env
 .DS_Store
+tunnel.log

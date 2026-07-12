@@ -541,24 +541,25 @@
 
   <div id="debug-overlay" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#111;color:#f44;padding:12px;font:11px monospace;z-index:99999;max-height:200px;overflow:auto;border-top:2px solid #f44"></div>
   <script>window.addEventListener('error',function(e){var d=document.getElementById('debug-overlay');if(d){d.style.display='block';d.innerHTML+='<div>🚨 '+e.message.replace(/</g,'&lt;')+' at '+e.filename+':'+e.lineno+'</div>';}});window.addEventListener('unhandledrejection',function(e){var d=document.getElementById('debug-overlay');if(d){d.style.display='block';d.innerHTML+='<div>⚠️ Promise: '+(e.reason||'unknown').toString().replace(/</g,'&lt;')+'</div>';}});</script>
+  <script>if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){regs.forEach(function(r){r.unregister();});});}</script>
   <script src="https://accounts.google.com/gsi/client"></script>
-  <script src="js/data.js?v=2"></script>
+  <script src="js/data.js?v=3"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
-  <script src="js/voice.js?v=2"></script>
-  <script src="js/modules/settings.js?v=2"></script>
-  <script src="js/modules/clock.js?v=2"></script>
-  <script src="js/modules/news.js?v=2"></script>
-  <script src="js/modules/notes.js?v=2"></script>
-  <script src="js/modules/todo.js?v=2"></script>
-  <script src="js/modules/calendar.js?v=2"></script>
-  <script src="js/modules/pomodoro.js?v=2"></script>
-  <script src="js/modules/links.js?v=2"></script>
-  <script src="js/modules/habits.js?v=2"></script>
-  <script src="js/modules/terminal.js?v=2"></script>
-  <script src="js/modules/player.js?v=2"></script>
-  <script src="js/modules/ai.js?v=2"></script>
-  <script src="js/modules/game.js?v=2"></script>
-  <script src="js/modules/leitura.js?v=2"></script>
-  <script src="js/main.js?v=2"></script>
+  <script src="js/voice.js?v=3"></script>
+  <script src="js/modules/settings.js?v=3"></script>
+  <script src="js/modules/clock.js?v=3"></script>
+  <script src="js/modules/news.js?v=3"></script>
+  <script src="js/modules/notes.js?v=3"></script>
+  <script src="js/modules/todo.js?v=3"></script>
+  <script src="js/modules/calendar.js?v=3"></script>
+  <script src="js/modules/pomodoro.js?v=3"></script>
+  <script src="js/modules/links.js?v=3"></script>
+  <script src="js/modules/habits.js?v=3"></script>
+  <script src="js/modules/terminal.js?v=3"></script>
+  <script src="js/modules/player.js?v=3"></script>
+  <script src="js/modules/ai.js?v=3"></script>
+  <script src="js/modules/game.js?v=3"></script>
+  <script src="js/modules/leitura.js?v=3"></script>
+  <script src="js/main.js?v=3"></script>
 </body>
 </html>
