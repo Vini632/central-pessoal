@@ -460,7 +460,7 @@ const server = http.createServer((req, res) => {
   }
 
   // Static files
-  let filePath = path.join(__dirname, url === '/' ? 'index.html' : url);
+  let filePath = path.join(__dirname, url === '/' ? 'index.html' : url.split('?')[0]);
   const ext = path.extname(filePath);
 
   fs.readFile(filePath, (err, data) => {
