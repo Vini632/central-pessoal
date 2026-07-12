@@ -284,12 +284,13 @@ const AI = {
           this.model = sorted[0].name;
           if (settingsModel) this.addSystem(`Modelo "${settingsModel}" não disponível. Usando "${this.model}"`);
         }
-      this.addSystem(`Modelo: ${this.model}`);
-    } else {
-      this.addSystem('Nenhum modelo encontrado.');
-      this.input.disabled = true; this.sendBtn.disabled = true;
-      return;
-    }
+        this.addSystem(`Modelo: ${this.model}`);
+      } else {
+        this.addSystem('Nenhum modelo encontrado.');
+        this.input.disabled = true; this.sendBtn.disabled = true;
+        return;
+      }
+    } catch {}
 
     // Carregar instruções do arquivo
     try {
