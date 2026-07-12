@@ -241,9 +241,6 @@ const server = http.createServer((req, res) => {
     req.on('data', (chunk) => { body += chunk; });
     req.on('end', () => {
       ollamaProxy('/api/generate', 'POST', body, res);
-      });
-
-      proxy.end(body);
     });
     return;
   }

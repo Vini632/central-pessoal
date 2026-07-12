@@ -1,1 +1,0 @@
-PS C:\Users\vpers\OneDrive\Desktop\projetos\ativos\projeto_sem_ideia> git add -A; git commit -m "feat: remote Ollama URL config + DISABLE_OLLAMA env"; git push
