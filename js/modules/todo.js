@@ -34,11 +34,16 @@ const Todo = {
   add() {
     const input = document.getElementById('todo-input');
     const text = input.value.trim();
-    if (!text) return;
+    console.log('Todo.add() text:', JSON.stringify(text), 'length:', text.length);
+    if (!text) { console.log('Todo.add(): empty, returning'); return; }
+    console.log('Todo.add(): pushing item');
     this.data.unshift({ id: Date.now().toString(36), text, done: false });
     input.value = '';
+    console.log('Todo.add(): saving');
     this.save();
+    console.log('Todo.add(): rendering');
     this.render();
+    console.log('Todo.add(): done');
   },
 
   toggle(id) {

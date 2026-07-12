@@ -29,7 +29,8 @@ const Habits = {
   create() {
     const input = document.getElementById('habit-input');
     const name = input.value.trim();
-    if (!name) return;
+    console.log('Habits.create() name:', JSON.stringify(name), 'length:', name.length);
+    if (!name) { console.log('Habits.create(): empty, returning'); return; }
     const iconSelect = document.getElementById('habit-icon');
     const habit = {
       id: Date.now().toString(36),
@@ -38,11 +39,15 @@ const Habits = {
       color: '#ffffff',
       sortOrder: this.habits.length,
     };
+    console.log('Habits.create(): pushing habit', habit);
     this.habits.push(habit);
+    console.log('Habits.create(): saving');
     this.save();
+    console.log('Habits.create(): rendering');
     this.render();
     input.value = '';
     input.focus();
+    console.log('Habits.create(): done');
   },
 
   delete(id) {
