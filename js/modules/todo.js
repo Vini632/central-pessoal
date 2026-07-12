@@ -2,13 +2,20 @@ const Todo = {
   data: [],
 
   init() {
+    console.log('Todo.init()');
     this.load();
     this.render();
-    document.getElementById('todo-add-btn').addEventListener('click', () => this.add());
-    document.getElementById('todo-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.add();
+    const addBtn = document.getElementById('todo-add-btn');
+    console.log('todo-add-btn:', addBtn);
+    if (addBtn) addBtn.addEventListener('click', () => { console.log('todo-add-btn clicked'); this.add(); });
+    const input = document.getElementById('todo-input');
+    console.log('todo-input:', input);
+    if (input) input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { console.log('todo-input enter'); this.add(); }
     });
-    document.getElementById('todo-voice-btn').addEventListener('click', function() {
+    const voiceBtn = document.getElementById('todo-voice-btn');
+    console.log('todo-voice-btn:', voiceBtn);
+    if (voiceBtn) voiceBtn.addEventListener('click', function() {
       const input = document.getElementById('todo-input');
       if (Voice.recognition) Voice.stop(this);
       else Voice.start(input, this);

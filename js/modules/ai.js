@@ -93,7 +93,7 @@ const AI = {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
             </button>
             <textarea id="ai-input" rows="1" placeholder="Pergunte algo a IA..." disabled></textarea>
-            <button id="ai-send" class="btn-primary" disabled>
+            <button id="ai-send" class="btn-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
@@ -251,6 +251,7 @@ const AI = {
 
       if (data.running) {
         this.setStatus('connected', 'conectado');
+        this.sendBtn.disabled = false;
       } else {
         this.addSystem('Ollama não encontrado. Iniciando...');
         this.setStatus('connecting', 'iniciando...');
@@ -263,6 +264,7 @@ const AI = {
           return;
         }
         this.setStatus('connected', 'conectado');
+        this.sendBtn.disabled = false;
       }
     } catch (e) {
       this.addSystem('⚠️ Servidor Ollama não acessível. O chat funcionará quando disponível.');
@@ -315,7 +317,7 @@ const AI = {
     this.input.placeholder = 'Pergunte algo a IA...';
     this.input.focus();
 
-    this.sendBtn.addEventListener('click', () => this.send());
+    this.sendBtn.addEventListener('click', () => { console.log('ai-send clicked'); this.send(); });
     this.input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); }
     });

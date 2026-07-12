@@ -3,11 +3,16 @@ const Habits = {
   logs: [],
 
   init() {
+    console.log('Habits.init()');
     this.load();
     this.render();
-    document.getElementById('habit-add-btn').addEventListener('click', () => this.create());
-    document.getElementById('habit-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.create();
+    const addBtn = document.getElementById('habit-add-btn');
+    console.log('habit-add-btn:', addBtn);
+    if (addBtn) addBtn.addEventListener('click', () => { console.log('habit-add-btn clicked'); this.create(); });
+    const input = document.getElementById('habit-input');
+    console.log('habit-input:', input);
+    if (input) input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { console.log('habit-input enter'); this.create(); }
     });
   },
 
