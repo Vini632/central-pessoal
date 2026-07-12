@@ -2889,7 +2889,20 @@ body {
   color: #333;
 }
 
-#ai-send { padding: 10px 14px; flex-shrink: 0; }
+#ai-send {
+  padding: 10px 14px;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#ai-send svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
 
 /* AI Layout */
 #ai-layout { display: flex; gap: 12px; height: calc(100vh - 180px); min-height: 400px; }

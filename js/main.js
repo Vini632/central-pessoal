@@ -109,10 +109,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
 
     const navBtn = document.querySelector(`.nav-btn[data-module="${moduleName}"]`);
-    if (navBtn) navBtn.classList.add('active');
+    if (navBtn) {
+      navBtn.classList.add('active');
+    } else {
+      console.warn('navigateTo: nav button not found for', moduleName);
+    }
 
     const target = document.getElementById(`mod-${moduleName}`);
-    if (target) target.classList.add('active');
+    if (target) {
+      target.classList.add('active');
+    } else {
+      console.error('navigateTo: module not found for', `mod-${moduleName}`);
+    }
 
     if (moduleName === 'terminal') {
       TerminalModule.activate();
@@ -127,7 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Sidebar navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => navigateTo(btn.dataset.module));
+      if (btn.dataset.module) {
+        btn.addEventListener('click', () => navigateTo(btn.dataset.module));
+      } else {
+        console.warn('nav-btn without data-module:', btn.id || btn);
+      }
     });
 
     // Menu cards navigation
