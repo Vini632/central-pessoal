@@ -311,6 +311,7 @@ const AI = {
       this.addSystem('ℹ️ Modelo atual não suporta imagens (enviar imagem pode falhar)');
     }
 
+    this.input.disabled = false;
     this.input.placeholder = 'Pergunte algo a IA...';
     this.input.focus();
 
