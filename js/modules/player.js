@@ -154,6 +154,16 @@ const Player = {
       if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       if (this.ctx.state === 'suspended') this.ctx.resume();
     }, { once: true });
+
+    // Auto-advance YouTube player when video ends
+    window.addEventListener('message', (e) => {
+      try {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+        if (data.event === 'onStateChange' && data.info === 0) {
+          this.playNext();
+        }
+      } catch {}
+    });
   },
 
   // ---- Ambient sounds ----
