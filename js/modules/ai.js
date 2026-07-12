@@ -92,7 +92,7 @@ const AI = {
             <button id="ai-voice-btn" class="btn-icon" title="Dictar" style="padding:8px">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
             </button>
-            <textarea id="ai-input" rows="1" placeholder="Pergunte algo a IA..." disabled></textarea>
+            <textarea id="ai-input" rows="1" placeholder="Pergunte algo a IA..."></textarea>
             <button id="ai-send" class="btn-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
@@ -110,6 +110,12 @@ const AI = {
 
     this.loadConversations();
     this.renderConvList();
+
+    // Auto-create first conversation if none exists
+    if (this.conversations.length === 0) {
+      this.newChat();
+    }
+
     this.loadChat();
 
     document.getElementById('ai-new-chat').addEventListener('click', () => this.newChat());
@@ -422,7 +428,8 @@ const AI = {
   async send() {
     const text = this.input.value.trim();
     const conv = this.currentConv;
-    if ((!text && this.attachments.length === 0) || !conv) return;
+    console.log('AI.send() text:', JSON.stringify(text), 'conv:', !!conv, 'attachments:', this.attachments.length);
+    if ((!text && this.attachments.length === 0) || !conv) { console.log('AI.send(): early return'); return; }
 
     // Build prompt with attachments
     let prompt = text;
