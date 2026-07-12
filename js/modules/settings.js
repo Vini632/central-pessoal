@@ -124,6 +124,15 @@ const Settings = {
         <div class="settings-desc">Aplicativo desktop com Electron. ~180 MB. Execute sem precisar de navegador.</div>
       </div>
       <div class="settings-group" style="border-top:1px solid var(--border-subtle);padding-top:16px;margin-top:8px">
+        <label class="settings-label">Exportar / Importar Dados</label>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <button id="export-data-btn" class="btn-secondary" style="padding:8px 14px">⬇ EXPORTAR</button>
+          <button id="import-data-btn" class="btn-secondary" style="padding:8px 14px">⬆ IMPORTAR</button>
+          <input type="file" id="import-file-input" accept=".json" style="display:none">
+        </div>
+        <div class="settings-desc">Exporta todo localStorage (.json) pra transferir entre dispositivos.</div>
+      </div>
+      <div class="settings-group" style="border-top:1px solid var(--border-subtle);padding-top:16px;margin-top:8px">
         <label class="settings-label">Google Drive</label>
         <div id="drive-status">
           <span class="drive-dot ${this.data.driveToken ? 'connected' : 'disconnected'}"></span>
@@ -175,6 +184,10 @@ const Settings = {
     document.getElementById('drive-restore-btn').addEventListener('click', () => this.driveRestore());
 
     document.getElementById('set-yt-test').addEventListener('click', () => this.testYtKey());
+
+    document.getElementById('export-data-btn').addEventListener('click', () => this.exportData());
+    document.getElementById('import-data-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
+    document.getElementById('import-file-input').addEventListener('change', (e) => this.importData(e));
 
     // Check if .exe download is available
     fetch('/builds/CentralPessoal.exe', { method: 'HEAD' }).then(r => {
@@ -324,5 +337,45 @@ const Settings = {
       this.data.driveToken = '';
       this.save();
     }
+  },
+
+  exportData() {
+    const backup = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('central_')) backup[key] = JSON.parse(localStorage.getItem(key));
+    }
+    backup._exportDate = new Date().toISOString();
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `central-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+
+  importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        let count = 0;
+        for (const [key, value] of Object.entries(data)) {
+          if (key.startsWith('central_') && key !== '_exportDate') {
+            localStorage.setItem(key, JSON.stringify(value));
+            fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) }).catch(() => {});
+            count++;
+          }
+        }
+        alert(`✅ ${count} dados importados! Recarregando...`);
+        location.reload();
+      } catch {
+        alert('❌ Arquivo inválido.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   },
 };
