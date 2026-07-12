@@ -156,14 +156,16 @@ const Settings = {
     overlay.classList.remove('hidden');
 
     const save = () => {
-      this.data.aiModel = document.getElementById('set-ai-model').value;
-      this.data.weatherCity = document.getElementById('set-weather-city').value.trim();
-      this.data.youtubeApiKey = document.getElementById('set-yt-key').value.trim();
-      this.data.autoTheme = document.getElementById('set-auto-theme').checked;
-      this.data.driveClientId = document.getElementById('set-drive-client-id').value.trim();
-      this.data.ollamaUrl = document.getElementById('set-ollama-url').value.trim();
+      const g = (id) => document.getElementById(id);
+      try {
+        if (g('set-ai-model')) this.data.aiModel = g('set-ai-model').value;
+        if (g('set-weather-city')) this.data.weatherCity = g('set-weather-city').value.trim();
+        if (g('set-yt-key')) this.data.youtubeApiKey = g('set-yt-key').value.trim();
+        if (g('set-auto-theme')) this.data.autoTheme = g('set-auto-theme').checked;
+        if (g('set-drive-client-id')) this.data.driveClientId = g('set-drive-client-id').value.trim();
+        if (g('set-ollama-url')) this.data.ollamaUrl = g('set-ollama-url').value.trim();
+      } catch {}
       this.save();
-      // Send Ollama URL to server
       if (this.data.ollamaUrl) {
         fetch('/api/ollama/set-url', {
           method: 'POST',
