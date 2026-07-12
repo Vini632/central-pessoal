@@ -82,9 +82,13 @@ const Player = {
           </div>
 
           <div class="yt-panel" id="yt-panel-playlists">
-            <div id="yt-playlist-input-line" style="display:flex;gap:6px;margin-bottom:12px">
-              <input id="yt-playlist-name" class="settings-select" placeholder="Nome da playlist" style="background-image:none;flex:1">
+            <div id="yt-playlist-input-line" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+              <input id="yt-playlist-name" class="settings-select" placeholder="Nome da playlist" style="background-image:none;flex:1;min-width:120px">
               <button id="yt-playlist-create" class="btn-primary" style="padding:8px 14px;font-size:11px">CRIAR</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+              <input id="yt-pl-import-url" class="settings-select" placeholder="URL da playlist do YouTube" style="background-image:none;flex:2;min-width:180px;font-size:11px">
+              <button id="yt-pl-import-btn" class="btn-secondary" style="padding:8px 14px;font-size:11px">IMPORTAR PLAYLIST</button>
             </div>
             <div id="yt-playlists-list"></div>
           </div>
@@ -136,6 +140,12 @@ const Player = {
 
     document.getElementById('yt-queue-clear')?.addEventListener('click', () => this.clearQueue());
     document.getElementById('yt-playlist-create').addEventListener('click', () => this.createPlaylist());
+    document.getElementById('yt-pl-import-btn').addEventListener('click', () => {
+      const input = document.getElementById('yt-pl-import-url');
+      const parsed = this.extractId(input.value.trim());
+      if (!parsed || parsed.type !== 'playlist') { alert('Cole uma URL de playlist do YouTube válida.'); return; }
+      this.importYTPlaylist(parsed.id);
+    });
     document.getElementById('yt-playlist-name').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.createPlaylist();
     });
@@ -590,6 +600,37 @@ const Player = {
       const raw = localStorage.getItem('central_yt_playlists');
       this.playlists = raw ? JSON.parse(raw) : [];
     } catch { this.playlists = []; }
+  },
+
+  async importYTPlaylist(playlistId) {
+    const apiKey = Settings.get('youtubeApiKey');
+    if (!apiKey) { alert('Configure a YouTube API Key nas Configurações primeiro.'); return; }
+    if (!this.playlists.length) { alert('Crie uma playlist primeiro.'); return; }
+    const plName = prompt('Qual playlist adicionar os vídeos?\n\n' + this.playlists.map((p,i) => `${i+1}. ${p.name} (${p.videos.length} vídeos)`).join('\n') + '\n\nDigite o número:');
+    if (!plName) return;
+    const idx = parseInt(plName) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= this.playlists.length) { alert('Número inválido.'); return; }
+    const target = this.playlists[idx];
+    try {
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}`);
+      const data = await res.json();
+      if (data.error) { alert('Erro: ' + data.error.message); return; }
+      if (!data.items || data.items.length === 0) { alert('Nenhum vídeo encontrado na playlist.'); return; }
+      let added = 0;
+      for (const item of data.items) {
+        const vid = item.snippet.resourceId.videoId;
+        const title = item.snippet.title;
+        if (!target.videos.some(v => v.id === vid)) {
+          target.videos.push({ id: vid, title: title || vid, added: Date.now() });
+          added++;
+        }
+      }
+      this.savePlaylists();
+      this.renderPlaylists();
+      alert(`✅ ${added} vídeos importados para "${target.name}"!`);
+    } catch (e) {
+      alert('Erro ao importar: ' + e.message);
+    }
   },
 
   renderPlaylists() {
