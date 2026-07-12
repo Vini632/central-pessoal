@@ -7,6 +7,7 @@ const Settings = {
     autoTheme: false,
     driveClientId: '',
     driveToken: '',
+    ollamaUrl: '',
   },
 
   data: {},
@@ -83,6 +84,11 @@ const Settings = {
         <div class="settings-desc">Modelo usado pelo chat de IA</div>
       </div>
       <div class="settings-group">
+        <label class="settings-label">URL do Ollama (para web)</label>
+        <input class="settings-select" id="set-ollama-url" placeholder="http://localhost:11434" value="${this.data.ollamaUrl || ''}" style="background-image:none">
+        <div class="settings-desc">Deixe vazio para usar localhost. Se estiver na web, coloque a URL do tunnel do seu PC (ex: https://seu-tunnel.trycloudflare.com)</div>
+      </div>
+      <div class="settings-group">
         <label class="settings-label">Cidade (clima)</label>
         <input class="settings-select" id="set-weather-city" placeholder="Ex: Sao Paulo" value="${this.data.weatherCity || ''}" style="background-image:none">
         <div class="settings-desc">Deixe vazio para detectar automaticamente</div>
@@ -146,7 +152,16 @@ const Settings = {
       this.data.youtubeApiKey = document.getElementById('set-yt-key').value.trim();
       this.data.autoTheme = document.getElementById('set-auto-theme').checked;
       this.data.driveClientId = document.getElementById('set-drive-client-id').value.trim();
+      this.data.ollamaUrl = document.getElementById('set-ollama-url').value.trim();
       this.save();
+      // Send Ollama URL to server
+      if (this.data.ollamaUrl) {
+        fetch('/api/ollama/set-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: this.data.ollamaUrl }),
+        }).catch(() => {});
+      }
       if (this.data.autoTheme) this.checkAutoTheme();
       this.close();
     };

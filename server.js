@@ -86,6 +86,30 @@ const MIME = {
 
 let ollamaProcess = null;
 let ollamaCmd = 'ollama';
+let ollamaUrl = `http://localhost:${OLLAMA_PORT}`;
+
+// Helper: proxy request to configured Ollama URL
+function ollamaProxy(path, method, body, res) {
+  const urlObj = new URL(path, ollamaUrl);
+  const mod = urlObj.protocol === 'https:' ? require('https') : require('http');
+  const opts = {
+    hostname: urlObj.hostname, port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+    path: urlObj.pathname + urlObj.search,
+    method: method || 'GET',
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    timeout: 120000,
+  };
+  const proxy = mod.request(opts, (ollamaRes) => {
+    const extra = path === '/api/generate' ? { 'Cache-Control': 'no-cache' } : {};
+    res.writeHead(ollamaRes.statusCode, { 'Content-Type': 'application/x-ndjson', 'Access-Control-Allow-Origin': '*', ...extra });
+    ollamaRes.pipe(res);
+  });
+  proxy.on('error', () => {
+    if (!res.headersSent) { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Ollama offline' })); }
+  });
+  if (body) proxy.write(body);
+  proxy.end();
+}
 
 function checkOllama() {
   return new Promise((resolve) => {
@@ -190,56 +214,33 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API: List Ollama models
-  if (url === '/api/ollama/models') {
-    http.get(`http://localhost:${OLLAMA_PORT}/api/tags`, (ollamaRes) => {
-      let data = '';
-      ollamaRes.on('data', (chunk) => { data += chunk; });
-      ollamaRes.on('end', () => {
-        res.writeHead(200, {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        });
-        res.end(data);
-      });
-    }).on('error', () => {
-      res.writeHead(502, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Ollama offline', models: [] }));
+  // API: Set Ollama URL
+  if (url === '/api/ollama/set-url' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const { url: newUrl } = JSON.parse(body);
+        if (newUrl) { ollamaUrl = newUrl.replace(/\/+$/, ''); }
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ url: ollamaUrl }));
+      } catch { res.writeHead(400); res.end('{}'); }
     });
     return;
   }
 
-  // Proxy: Ollama generate
+  // API: List Ollama models (uses configured ollamaUrl)
+  if (url === '/api/ollama/models') {
+    ollamaProxy('/api/tags', 'GET', null, res);
+    return;
+  }
+
+  // Proxy: Ollama generate (uses configured ollamaUrl)
   if (url === '/api/ollama/generate' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
     req.on('end', () => {
-      const options = {
-        hostname: 'localhost',
-        port: OLLAMA_PORT,
-        path: '/api/generate',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      };
-
-      const proxy = http.request(options, (ollamaRes) => {
-        res.writeHead(ollamaRes.statusCode, {
-          'Content-Type': 'application/x-ndjson',
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'no-cache',
-        });
-        ollamaRes.pipe(res);
-      });
-
-      proxy.setTimeout(120000, () => {
-        proxy.destroy();
-        res.writeHead(504, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Ollama timeout após 120s' }));
-      });
-
-      proxy.on('error', (err) => {
-        res.writeHead(502, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Ollama offline', detail: err.message }));
+      ollamaProxy('/api/generate', 'POST', body, res);
       });
 
       proxy.end(body);
