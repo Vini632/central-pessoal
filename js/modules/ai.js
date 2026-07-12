@@ -245,35 +245,45 @@ const AI = {
   },
 
   async bootstrap() {
-    let res = await fetch('/api/ollama/status');
-    let data = await res.json();
+    try {
+      let res = await fetch('/api/ollama/status');
+      let data = await res.json();
 
-    if (!data.running) {
-      this.addSystem('Ollama não encontrado. Iniciando...');
-      this.setStatus('connecting', 'iniciando...');
-      res = await fetch('/api/ollama/start');
-      data = await res.json();
-      if (!data.started) {
-        this.addSystem('⚠️ Ollama não encontrado. Instale em https://ollama.com');
-        this.setStatus('disconnected', 'offline');
-        this.input.disabled = true; this.sendBtn.disabled = true;
-        return;
+      if (data.running) {
+        this.setStatus('connected', 'conectado');
+      } else {
+        this.addSystem('Ollama não encontrado. Iniciando...');
+        this.setStatus('connecting', 'iniciando...');
+        res = await fetch('/api/ollama/start');
+        data = await res.json();
+        if (!data.started) {
+          this.addSystem('⚠️ Ollama offline. O chat funcionará quando o Ollama estiver disponível.');
+          this.setStatus('disconnected', 'offline');
+          this.sendBtn.disabled = true;
+          return;
+        }
+        this.setStatus('connected', 'conectado');
       }
+    } catch (e) {
+      this.addSystem('⚠️ Servidor Ollama não acessível. O chat funcionará quando disponível.');
+      this.setStatus('disconnected', 'offline');
+      this.sendBtn.disabled = true;
+      console.error('AI bootstrap error:', e);
+      return;
     }
 
-    this.setStatus('connected', 'conectado');
-
     const settingsModel = Settings.get('aiModel');
-    res = await fetch('/api/ollama/models');
-    data = await res.json();
-    if (data.models && data.models.length > 0) {
-      const names = data.models.map(m => m.name);
-      if (settingsModel && names.includes(settingsModel)) this.model = settingsModel;
-      else {
-        const sorted = [...data.models].sort((a, b) => (a.size || 0) - (b.size || 0));
-        this.model = sorted[0].name;
-        if (settingsModel) this.addSystem(`Modelo "${settingsModel}" não disponível. Usando "${this.model}"`);
-      }
+    try {
+      const res = await fetch('/api/ollama/models');
+      const data = await res.json();
+      if (data.models && data.models.length > 0) {
+        const names = data.models.map(m => m.name);
+        if (settingsModel && names.includes(settingsModel)) this.model = settingsModel;
+        else {
+          const sorted = [...data.models].sort((a, b) => (a.size || 0) - (b.size || 0));
+          this.model = sorted[0].name;
+          if (settingsModel) this.addSystem(`Modelo "${settingsModel}" não disponível. Usando "${this.model}"`);
+        }
       this.addSystem(`Modelo: ${this.model}`);
     } else {
       this.addSystem('Nenhum modelo encontrado.');

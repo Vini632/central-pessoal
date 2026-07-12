@@ -469,7 +469,7 @@ const server = http.createServer((req, res) => {
       res.end('404');
       return;
     }
-    const cacheControl = ext === '.html' ? 'no-cache, no-store, must-revalidate' : 'max-age=0, must-revalidate';
+    const cacheControl = ext === '.html' || ext === '.js' || ext === '.css' ? 'no-cache, no-store, must-revalidate' : 'max-age=0, must-revalidate';
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cacheControl });
     res.end(data);
   });
