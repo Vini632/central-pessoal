@@ -128,10 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function initModules() {
-    [{name:'Settings', fn:() => Settings.init()}, {name:'Player', fn:() => Player.init()}, {name:'Clock', fn:() => Clock.init()}, {name:'News', fn:() => News.init()}, {name:'Notes', fn:() => Notes.init()}, {name:'Todo', fn:() => Todo.init()}, {name:'Calendar', fn:() => Calendar.init()}, {name:'Pomodoro', fn:() => Pomodoro.init()}, {name:'Links', fn:() => Links.init()}, {name:'Habits', fn:() => Habits.init()}, {name:'Terminal', fn:() => TerminalModule.init()}, {name:'AI', fn:() => AI.init()}, {name:'Game', fn:() => Game.init()}, {name:'Leitura', fn:() => Leitura.init()}].forEach(m => { try { m.fn(); } catch(e) { console.error('Init error: '+m.name, e); } });
-
-    // Auto theme check every minute
-    setInterval(() => { if (Settings.data?.autoTheme) Settings.checkAutoTheme(); }, 60000);
+    [{name:'Settings', fn:() => Settings.init()}, {name:'Player', fn:() => Player.init()}, {name:'Clock', fn:() => Clock.init()}, {name:'News', fn:() => News.init()}, {name:'Notes', fn:() => Notes.init()}, {name:'Todo', fn:() => Todo.init()}, {name:'Calendar', fn:() => Calendar.init()}, {name:'Pomodoro', fn:() => Pomodoro.init()}, {name:'Links', fn:() => Links.init()}, {name:'Habits', fn:() => Habits.init()}, {name:'Terminal', fn:() => TerminalModule.init()}, {name:'AI', fn:() => AI.init()}, {name:'Game', fn:() => Game.init()}, {name:'Leitura', fn:() => Leitura.init()    }].forEach(m => { try { m.fn(); } catch(e) { console.error('Init error: '+m.name, e); } });
 
     // Sidebar navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {

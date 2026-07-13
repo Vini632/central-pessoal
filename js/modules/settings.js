@@ -4,7 +4,6 @@ const Settings = {
     weatherCity: '',
     youtubeApiKey: '',
     theme: 'monochrome',
-    autoTheme: false,
     driveClientId: '',
     driveToken: '',
     ollamaUrl: '',
@@ -15,7 +14,6 @@ const Settings = {
   init() {
     this.load();
     this.applyTheme();
-    if (this.data.autoTheme) this.checkAutoTheme();
     document.getElementById('btn-settings').addEventListener('click', () => this.open());
     document.getElementById('btn-theme').addEventListener('click', () => this.toggleTheme());
   },
@@ -41,17 +39,11 @@ const Settings = {
     }
   },
 
-  checkAutoTheme() {
-    const h = new Date().getHours();
-    const shouldBeLight = h >= 6 && h < 18;
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    if (shouldBeLight && !isLight) { this.data.theme = 'light'; this.applyTheme(); }
-    else if (!shouldBeLight && isLight) { this.data.theme = 'monochrome'; this.applyTheme(); }
-  },
-
   load() {
     const raw = Data.get('central_settings');
     this.data = raw ? { ...this.defaults, ...raw } : { ...this.defaults };
+    // Clean up old autoTheme if present
+    delete this.data.autoTheme;
   },
 
   save() {
@@ -106,13 +98,6 @@ const Settings = {
           (Habilite YouTube Data API v3)
         </div>
       </div>
-      <div class="settings-group">
-        <label class="settings-label" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-          <input type="checkbox" id="set-auto-theme" ${this.data.autoTheme ? 'checked' : ''}>
-          Tema automático
-        </label>
-        <div class="settings-desc">Alterna entre claro (06h-18h) e escuro automaticamente</div>
-      </div>
       <div class="settings-group" style="border-top:1px solid var(--border-subtle);padding-top:16px;margin-top:8px">
         <label class="settings-label">Versão Desktop (.exe)</label>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
@@ -161,7 +146,6 @@ const Settings = {
         if (g('set-ai-model')) this.data.aiModel = g('set-ai-model').value;
         if (g('set-weather-city')) this.data.weatherCity = g('set-weather-city').value.trim();
         if (g('set-yt-key')) this.data.youtubeApiKey = g('set-yt-key').value.trim();
-        if (g('set-auto-theme')) this.data.autoTheme = g('set-auto-theme').checked;
         if (g('set-drive-client-id')) this.data.driveClientId = g('set-drive-client-id').value.trim();
         if (g('set-ollama-url')) this.data.ollamaUrl = g('set-ollama-url').value.trim();
       } catch {}
@@ -173,7 +157,6 @@ const Settings = {
           body: JSON.stringify({ url: this.data.ollamaUrl }),
         }).catch(() => {});
       }
-      if (this.data.autoTheme) this.checkAutoTheme();
       this.close();
     };
 
