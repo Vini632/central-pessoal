@@ -13,7 +13,7 @@ const Calendar = {
     try {
       const raw = localStorage.getItem('central_notified');
       if (raw) this.notified = new Set(JSON.parse(raw));
-    } catch {}
+    } catch (e) { console.warn("calendar: catch", e); }
 
     // Pedir permissão de notificação
     if ('Notification' in window && Notification.permission === 'default') {
@@ -54,7 +54,7 @@ const Calendar = {
 
       if (ev.reminderTime === currentMin) {
         this.notified.add(key);
-        try { localStorage.setItem('central_notified', JSON.stringify([...this.notified])); } catch {}
+        try { Data.save('central_notified', [...this.notified]); } catch (e) { console.warn("calendar: catch", e); }
 
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('Lembrete: ' + ev.title, {
@@ -181,8 +181,8 @@ const Calendar = {
       this.closeForm();
       setTimeout(() => this.openForm(dateStr, event), 100);
     };
-    document.getElementById('modal-cancel').onclick = () => {
-      if (confirm(`Remover "${event.title}"?`)) {
+    document.getElementById('modal-cancel').onclick = async () => {
+      if (await Modal.confirm(`Remover "${event.title}"?`)) {
         this.remove(event.id);
         this.closeForm();
       }

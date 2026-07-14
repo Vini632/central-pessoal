@@ -135,7 +135,7 @@ const Game = {
         const p = JSON.parse(raw);
         if (p && p.type && p.hour !== undefined) { this.state = p; this.ensureDefaults(); return; }
       }
-    } catch {}
+    } catch (e) { console.warn("game: catch", e); }
     this.state = null;
   },
 
@@ -153,7 +153,7 @@ const Game = {
     if (this.state.daysPlayed === undefined) this.state.daysPlayed = 0;
   },
 
-  save() { try { localStorage.setItem('central_game', JSON.stringify(this.state)); } catch {} },
+  save() { try { Data.save('central_game', this.state); } catch (e) { console.warn("game: catch", e); } },
 
   startNew(type) {
     const cfg = this.data[type];
@@ -241,7 +241,7 @@ const Game = {
     }
   },
 
-  doAction(action) {
+  async doAction(action) {
     const s = this.state;
     const cfg = this.data[s.type];
     if (!cfg || !s) return;
@@ -286,7 +286,7 @@ const Game = {
           for (const [key, qty] of Object.entries(qtys)) {
             if (qty > 0) total += qty * cfg.materials[key].price;
           }
-          if (total > s.money) { alert('Dinheiro insuficiente!'); return; }
+          if (total > s.money) { Toast.warn('Dinheiro insuficiente!'); return; }
           if (total === 0) { overlay.classList.add('hidden'); return; }
           s.money -= total; s.stats.spent += total;
           for (const [key, qty] of Object.entries(qtys)) {
@@ -379,7 +379,7 @@ const Game = {
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); }, { once: true });
 
         const buyMkt = (cost, bonus, days) => {
-          if (s.money < cost) { alert('Dinheiro insuficiente!'); return; }
+          if (s.money < cost) { Toast.warn('Dinheiro insuficiente!'); return; }
           s.money -= cost; s.stats.spent += cost;
           s.marketing += bonus * days;
           this.addLog(`Campanha de marketing ativada! (+${bonus} clientes por ${days} dias)`);
@@ -407,7 +407,7 @@ const Game = {
         document.getElementById('modal-close').onclick = close;
 
         const takeLoan = (amount, interest) => {
-          if (s.loan.owed > 0) { alert('Já tem um empréstimo ativo!'); return; }
+          if (s.loan.owed > 0) { Toast.warn('Já tem um empréstimo ativo!'); return; }
           s.money += amount;
           s.loan.amount = amount;
           s.loan.owed = Math.round(amount * (1 + interest));
@@ -418,7 +418,7 @@ const Game = {
         document.getElementById('loan-med').addEventListener('click', () => takeLoan(120, 0.25));
         const payBtn = document.getElementById('loan-pay');
         if (payBtn) payBtn.addEventListener('click', () => {
-          if (s.money < s.loan.owed) { alert('Dinheiro insuficiente!'); return; }
+          if (s.money < s.loan.owed) { Toast.warn('Dinheiro insuficiente!'); return; }
           s.money -= s.loan.owed;
           this.addLog(`Dívida de $${s.loan.owed} paga!`);
           s.loan.amount = 0; s.loan.owed = 0;
@@ -443,8 +443,9 @@ const Game = {
         return;
       }
       case 'quit': {
-        if (!confirm('Tem certeza? O progresso será perdido.')) return;
+        if (!await Modal.confirm('Tem certeza? O progresso será perdido.')) return;
         localStorage.removeItem('central_game');
+        Data.remove('central_game');
         this.state = null;
         this.save();
         this.render();
@@ -569,7 +570,7 @@ const Game = {
 
     const s = this.state;
     const cfg = this.data[s.type];
-    if (!cfg) { section.innerHTML = '<div class="module-header"><h2>Jogo</h2></div><div class="game-empty"><p>Erro: dados do jogo corrompidos.</p><button id="game-reset-btn" class="btn-primary" style="margin-top:16px">REINICIAR</button></div>'; section.querySelector('#game-reset-btn')?.addEventListener('click', () => { localStorage.removeItem('central_game'); this.state = null; this.render(); }); return; }
+    if (!cfg) { section.innerHTML = '<div class="module-header"><h2>Jogo</h2></div><div class="game-empty"><p>Erro: dados do jogo corrompidos.</p><button id="game-reset-btn" class="btn-primary" style="margin-top:16px">REINICIAR</button></div>'; section.querySelector('#game-reset-btn')?.addEventListener('click', () => { Data.remove('central_game'); this.state = null; this.render(); }); return; }
     const nextLevel = s.level * 20;
 
     section.innerHTML = `

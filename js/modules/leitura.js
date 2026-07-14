@@ -35,13 +35,13 @@ const Leitura = {
     const url = input.value.trim();
     if (!url || this.loading) return;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      alert('URL inválida. Comece com http:// ou https://');
+      Toast.warn('URL inválida. Comece com http:// ou https://');
       return;
     }
     this.loading = true;
     this.render();
     try {
-      const res = await fetch('/api/metadata', {
+      const res = await apiFetch('/api/metadata', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

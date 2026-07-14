@@ -51,7 +51,10 @@ const TerminalModule = {
   },
 
   autoConnect() {
-    const url = 'ws://localhost:3456/terminal';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const port = window.location.port || (protocol === 'wss:' ? '443' : '80');
+    const url = `${protocol}//${host}:${port}/terminal`;
     this.writeln(`Conectando a ${url}...`);
     try {
       this.ws = new WebSocket(url);

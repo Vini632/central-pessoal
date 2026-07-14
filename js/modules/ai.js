@@ -187,9 +187,9 @@ const AI = {
     this.scrollConv();
   },
 
-  deleteChat(id, e) {
+  async deleteChat(id, e) {
     e.stopPropagation();
-    if (!confirm('Excluir esta conversa?')) return;
+    if (!await Modal.confirm('Excluir esta conversa?')) return;
     this.conversations = this.conversations.filter(c => c.id !== id);
     if (this.currentId === id) this.currentId = this.conversations.length > 0 ? this.conversations[0].id : null;
     this.saveConversations();
@@ -197,10 +197,10 @@ const AI = {
     this.loadChat();
   },
 
-  renameChat(id) {
+  async renameChat(id) {
     const conv = this.conversations.find(c => c.id === id);
     if (!conv) return;
-    const name = prompt('Nome da conversa:', conv.title);
+    const name = await Modal.prompt('Nome da conversa:', conv.title);
     if (name && name.trim()) { conv.title = name.trim(); conv.updated = Date.now(); this.saveConversations(); this.renderConvList(); }
   },
 
@@ -263,7 +263,7 @@ const AI = {
 
   async bootstrap() {
     try {
-      let res = await fetch('/api/ollama/status');
+      let res = await apiFetch('/api/ollama/status');
       let data = await res.json();
 
       if (data.running) {
@@ -272,7 +272,7 @@ const AI = {
       } else {
         this.addSystem('Ollama não encontrado. Iniciando...');
         this.setStatus('connecting', 'iniciando...');
-        res = await fetch('/api/ollama/start');
+        res = await apiFetch('/api/ollama/start');
         data = await res.json();
         if (!data.started) {
           this.addSystem('⚠️ Ollama offline. O chat funcionará quando o Ollama estiver disponível.');
@@ -293,7 +293,7 @@ const AI = {
 
     const settingsModel = Settings.get('aiModel');
     try {
-      const res = await fetch('/api/ollama/models');
+      const res = await apiFetch('/api/ollama/models');
       const data = await res.json();
       if (data.models && data.models.length > 0) {
         const names = data.models.map(m => m.name);
@@ -313,7 +313,7 @@ const AI = {
 
     // Carregar instruções do arquivo
     try {
-      const instRes = await fetch('/api/ai/instructions');
+      const instRes = await apiFetch('/api/ai/instructions');
       const instData = await instRes.json();
       if (instData.content) {
         this.systemPrompt = instData.content;
@@ -373,38 +373,38 @@ const AI = {
   },
 
   async promptLink() {
-    const url = prompt('Cole a URL:');
+    const url = await Modal.prompt('Cole a URL:');
     if (!url || !url.trim()) return;
     const linkBtn = document.getElementById('ai-link-btn');
     linkBtn.disabled = true; linkBtn.textContent = '⋯';
     try {
-      const res = await fetch('/api/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.trim() }) });
+      const res = await apiFetch('/api/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.trim() }) });
       const data = await res.json();
       if (data.content) {
         this.attachments.push({ type: 'link', name: data.title || url, url: url.trim(), content: data.content.slice(0, 5000) });
         this.renderAttachments();
       } else {
-        alert('Não foi possível ler o link.');
+        Toast.error('Não foi possível ler o link.');
       }
-    } catch { alert('Erro ao acessar link.'); }
+    } catch { Toast.error('Erro ao acessar link.'); }
     linkBtn.disabled = false; linkBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>';
   },
 
   async promptSearch() {
-    const q = prompt('Pesquisar na web:');
+    const q = await Modal.prompt('Pesquisar na web:');
     if (!q || !q.trim()) return;
     const searchBtn = document.getElementById('ai-search-btn');
     searchBtn.disabled = true; searchBtn.innerHTML = '⋯';
     try {
-      const res = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q.trim() }) });
+      const res = await apiFetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q.trim() }) });
       const data = await res.json();
       if (data.content) {
         this.attachments.push({ type: 'search', name: 'Web: ' + q.trim().slice(0, 40), content: data.content });
         this.renderAttachments();
       } else {
-        alert('Nenhum resultado encontrado.');
+        Toast.info('Nenhum resultado encontrado.');
       }
-    } catch { alert('Erro na pesquisa.'); }
+    } catch { Toast.error('Erro na pesquisa.'); }
     searchBtn.disabled = false; searchBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   },
 
@@ -475,7 +475,7 @@ const AI = {
       const body = { model: this.model, prompt, stream: true, system: this.systemPrompt || undefined };
       if (imageData.length > 0) body.images = imageData;
 
-      const res = await fetch('/api/ollama/generate', {
+      const res = await apiFetch('/api/ollama/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

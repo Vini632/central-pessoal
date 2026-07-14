@@ -2,11 +2,26 @@ const News = {
   sources: [
     { name: 'Tech Crunch', url: 'https://techcrunch.com/feed/' },
     { name: 'Hacker News', url: 'https://hnrss.org/frontpage' },
+    { name: 'G1', url: 'https://g1.globo.com/rss/g1/' },
+    { name: 'UOL', url: 'https://rss.uol.com.br/' },
+    { name: 'Canaltech', url: 'https://canaltech.com.br/rss/' },
   ],
 
   async init() {
     document.getElementById('news-refresh').addEventListener('click', () => this.fetch());
+    this.setupSatellite();
     this.fetch();
+  },
+
+  setupSatellite() {
+    const btn = document.getElementById('satellite-toggle');
+    const embed = document.getElementById('satellite-embed');
+    if (!btn || !embed) return;
+    btn.addEventListener('click', () => {
+      const open = embed.style.display === 'block';
+      embed.style.display = open ? 'none' : 'block';
+      btn.textContent = open ? '🛰️ VER SATÉLITES AO VIVO' : '🛰️ FECHAR SATÉLITES';
+    });
   },
 
   async fetch() {

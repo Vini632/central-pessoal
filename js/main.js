@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   let currentLine = 0;
+  let lazyModules;
 
   function addLine(lineData) {
     const line = document.createElement('div');
@@ -105,6 +106,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function navigateTo(moduleName) {
+    // Lazy-init module on first navigation (avoids 15 inits on boot)
+    if (lazyModules && lazyModules[moduleName]) {
+      try {
+        lazyModules[moduleName]();
+      } catch(e) {
+        console.error('Lazy init error: '+moduleName, e);
+      }
+      delete lazyModules[moduleName];
+    }
+
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
 
@@ -128,7 +139,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function initModules() {
-    [{name:'Settings', fn:() => Settings.init()}, {name:'Player', fn:() => Player.init()}, {name:'Clock', fn:() => Clock.init()}, {name:'News', fn:() => News.init()}, {name:'Notes', fn:() => Notes.init()}, {name:'Todo', fn:() => Todo.init()}, {name:'Calendar', fn:() => Calendar.init()}, {name:'Pomodoro', fn:() => Pomodoro.init()}, {name:'Links', fn:() => Links.init()}, {name:'Habits', fn:() => Habits.init()}, {name:'Terminal', fn:() => TerminalModule.init()}, {name:'AI', fn:() => AI.init()}, {name:'Game', fn:() => Game.init()}, {name:'Leitura', fn:() => Leitura.init()    }].forEach(m => { try { m.fn(); } catch(e) { console.error('Init error: '+m.name, e); } });
+    // Boot essentials: Settings (theme) + Clock (dashboard)
+    try { Settings.init(); } catch(e) { console.error('Init error: Settings', e); }
+    try { Clock.init(); } catch(e) { console.error('Init error: Clock', e); }
+
+    // Lazy modules — inited on first navigation via navigateTo()
+    lazyModules = {
+      player:    () => Player.init(),
+      ai:        () => AI.init(),
+      notes:     () => Notes.init(),
+      todo:      () => Todo.init(),
+      calendar:  () => Calendar.init(),
+      pomodoro:  () => Pomodoro.init(),
+      links:     () => Links.init(),
+      habits:    () => Habits.init(),
+      terminal:  () => { TerminalModule.init(); },
+      game:      () => Game.init(),
+      news:      () => News.init(),
+      leitura:   () => Leitura.init(),
+      bot:       () => Bot.init(),
+    };
 
     // Sidebar navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -168,10 +198,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const linkHits = links.filter(l => l.title.toLowerCase().includes(q) || l.url.toLowerCase().includes(q)).slice(0, 5);
       if (linkHits.length) groups.push({ label: 'Links', module: 'links', items: linkHits.map(l => ({ text: l.title, id: l.id })) });
 
-      // AI messages
-      const msgs = Data.get('central_ai_messages') || [];
-      const msgHits = msgs.filter(m => m.content.toLowerCase().includes(q)).slice(0, 5);
-      if (msgHits.length) groups.push({ label: 'Conversas IA', module: 'ai', items: msgHits.map(m => ({ text: m.content.substring(0, 80), id: '' })) });
+      // AI conversations
+      const convs = Data.get('central_ai_conversations') || [];
+      const msgHits = [];
+      for (const c of convs) {
+        if (c.messages) {
+          for (const m of c.messages) {
+            if (m.content && m.content.toLowerCase().includes(q)) {
+              msgHits.push({ text: m.content.substring(0, 80), id: '' });
+              if (msgHits.length >= 5) break;
+            }
+          }
+        }
+        if (msgHits.length >= 5) break;
+      }
+      if (msgHits.length) groups.push({ label: 'Conversas IA', module: 'ai', items: msgHits });
 
       if (!groups.length) {
         searchResults.innerHTML = '<div class="search-empty">Nenhum resultado</div>';
@@ -268,14 +309,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (key.startsWith('central_')) {
               localStorage.setItem(key, JSON.stringify(value));
               // Sync to API
-              try { await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) }); } catch {}
+              try { await apiFetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) }); } catch (e) { console.warn("main: catch", e); }
               count++;
             }
           }
-          alert(`${count} dados importados. Recarregue a pagina.`);
-          location.reload();
+          Toast.success(`${count} dados importados. Recarregue a pagina.`);
+          setTimeout(() => location.reload(), 1500);
         } catch {
-          alert('Arquivo invalido.');
+          Toast.error('Arquivo invalido.');
         }
       };
       reader.readAsText(file);
@@ -367,30 +408,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const interactiveElements = document.querySelectorAll('.menu-card, .nav-btn, .btn-primary, .btn-secondary, .btn-icon');
     interactiveElements.forEach(el => {
       el.addEventListener('click', function(e) {
-        const ripple = document.createElement('span');
-        const rect = this.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height);
-        const x = e.clientX - rect.left - size / 2;
-        const y = e.clientY - rect.top - size / 2;
+        try {
+          if (typeof this.getBoundingClientRect !== 'function') return;
+          if (!this.isConnected) return;
+          const rect = this.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
+          const size = Math.max(rect.width, rect.height);
+          const x = e.clientX - rect.left - size / 2;
+          const y = e.clientY - rect.top - size / 2;
 
-        ripple.style.cssText = `
-          position: absolute;
-          width: ${size}px;
-          height: ${size}px;
-          left: ${x}px;
-          top: ${y}px;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
-          border-radius: 50%;
-          transform: scale(0);
-          animation: rippleAnim 0.6s ease-out forwards;
-          pointer-events: none;
-          z-index: 10;
-        `;
+          const ripple = document.createElement('span');
+          ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: rippleAnim 0.6s ease-out forwards;
+            pointer-events: none;
+            z-index: 10;
+          `;
 
-        this.style.position = this.style.position || 'relative';
-        this.appendChild(ripple);
-
-        setTimeout(() => ripple.remove(), 700);
+          this.style.position = this.style.position || 'relative';
+          this.appendChild(ripple);
+          setTimeout(() => ripple.remove(), 700);
+        } catch { /* ripple is cosmetic, fail silently */ }
       });
     });
 

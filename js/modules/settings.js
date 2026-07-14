@@ -2,14 +2,14 @@ const Settings = {
   defaults: {
     aiModel: '',
     weatherCity: '',
-    youtubeApiKey: '',
     theme: 'monochrome',
     driveClientId: '',
-    driveToken: '',
     ollamaUrl: '',
   },
 
   data: {},
+  _driveToken: '',
+  _ytKey: '',
 
   init() {
     this.load();
@@ -42,26 +42,53 @@ const Settings = {
   load() {
     const raw = Data.get('central_settings');
     this.data = raw ? { ...this.defaults, ...raw } : { ...this.defaults };
-    // Clean up old autoTheme if present
-    delete this.data.autoTheme;
+    delete this.data.youtubeApiKey;
+    delete this.data.driveToken;
+    if (this.data.autoTheme !== undefined) {
+      delete this.data.autoTheme;
+      this.data.theme = 'monochrome';
+      this.save();
+    }
+    this._loadSensitive();
+  },
+
+  async _loadSensitive() {
+    try {
+      const yt = await apiFetch('/api/settings/youtubeApiKey');
+      const ytData = await yt.json();
+      this._ytKey = ytData.value || '';
+    } catch (e) { console.warn("settings: catch", e); }
+    try {
+      const dr = await apiFetch('/api/settings/driveToken');
+      const drData = await dr.json();
+      this._driveToken = drData.value || '';
+    } catch (e) { console.warn("settings: catch", e); }
   },
 
   save() {
     Data.save('central_settings', this.data);
+    if (this._ytKey) {
+      apiFetch('/api/settings/youtubeApiKey', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: this._ytKey }) }).catch(() => {});
+    }
+    if (this._driveToken) {
+      apiFetch('/api/settings/driveToken', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: this._driveToken }) }).catch(() => {});
+    }
   },
 
   get(key) {
+    if (key === 'youtubeApiKey') return this._ytKey;
+    if (key === 'driveToken') return this._driveToken;
     return this.data[key] || this.defaults[key];
   },
 
   async open() {
-    // Fetch available models for the dropdown
+    await this._loadSensitive();
     let models = [];
     try {
-      const res = await fetch('/api/ollama/models');
+      const res = await apiFetch('/api/ollama/models');
       const data = await res.json();
       if (data.models) models = data.models.map(m => m.name);
-    } catch {}
+    } catch (e) { console.warn("settings: catch", e); }
 
     const overlay = document.getElementById('modal-overlay');
     document.getElementById('modal-title').textContent = 'Configurações';
@@ -88,7 +115,7 @@ const Settings = {
       <div class="settings-group">
         <label class="settings-label">YouTube API Key</label>
         <div style="display:flex;gap:6px">
-          <input class="settings-select" id="set-yt-key" placeholder="Cole sua chave da API do YouTube" value="${this.data.youtubeApiKey || ''}" style="background-image:none;flex:1">
+          <input class="settings-select" id="set-yt-key" placeholder="Cole sua chave da API do YouTube" value="${this._ytKey}" style="background-image:none;flex:1">
           <button id="set-yt-test" class="btn-secondary" style="padding:8px 12px;font-size:11px">TESTAR</button>
         </div>
         <div id="set-yt-status" style="font-size:11px;margin-top:4px;color:var(--text-tertiary)"></div>
@@ -120,8 +147,8 @@ const Settings = {
       <div class="settings-group" style="border-top:1px solid var(--border-subtle);padding-top:16px;margin-top:8px">
         <label class="settings-label">Google Drive</label>
         <div id="drive-status">
-          <span class="drive-dot ${this.data.driveToken ? 'connected' : 'disconnected'}"></span>
-          <span>${this.data.driveToken ? 'Conectado' : 'Desconectado'}</span>
+          <span class="drive-dot ${this._driveToken ? 'connected' : 'disconnected'}"></span>
+          <span>${this._driveToken ? 'Conectado' : 'Desconectado'}</span>
         </div>
         <input class="settings-select" id="set-drive-client-id" placeholder="Seu Client ID do Google Cloud" value="${this.data.driveClientId || ''}" style="background-image:none;font-size:11px;margin-top:6px">
         <div class="settings-desc">
@@ -130,9 +157,9 @@ const Settings = {
           (Web application, adicione seu domínio em Authorized JavaScript origins)
         </div>
         <div class="drive-btns" style="margin-top:8px">
-          <button id="drive-connect-btn" class="btn-secondary" style="padding:8px">${this.data.driveToken ? 'RECONECTAR' : 'CONECTAR'}</button>
-          <button id="drive-backup-btn" class="btn-secondary" style="padding:8px" ${this.data.driveToken ? '' : 'disabled'}>BACKUP</button>
-          <button id="drive-restore-btn" class="btn-secondary" style="padding:8px" ${this.data.driveToken ? '' : 'disabled'}>RESTAURAR</button>
+          <button id="drive-connect-btn" class="btn-secondary" style="padding:8px">${this._driveToken ? 'RECONECTAR' : 'CONECTAR'}</button>
+          <button id="drive-backup-btn" class="btn-secondary" style="padding:8px" ${this._driveToken ? '' : 'disabled'}>BACKUP</button>
+          <button id="drive-restore-btn" class="btn-secondary" style="padding:8px" ${this._driveToken ? '' : 'disabled'}>RESTAURAR</button>
         </div>
       </div>
     `;
@@ -145,13 +172,13 @@ const Settings = {
       try {
         if (g('set-ai-model')) this.data.aiModel = g('set-ai-model').value;
         if (g('set-weather-city')) this.data.weatherCity = g('set-weather-city').value.trim();
-        if (g('set-yt-key')) this.data.youtubeApiKey = g('set-yt-key').value.trim();
+        if (g('set-yt-key')) this._ytKey = g('set-yt-key').value.trim();
         if (g('set-drive-client-id')) this.data.driveClientId = g('set-drive-client-id').value.trim();
         if (g('set-ollama-url')) this.data.ollamaUrl = g('set-ollama-url').value.trim();
-      } catch {}
+      } catch (e) { console.warn("settings: catch", e); }
       this.save();
       if (this.data.ollamaUrl) {
-        fetch('/api/ollama/set-url', {
+        apiFetch('/api/ollama/set-url', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: this.data.ollamaUrl }),
@@ -174,8 +201,7 @@ const Settings = {
     document.getElementById('import-data-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
     document.getElementById('import-file-input').addEventListener('change', (e) => this.importData(e));
 
-    // Check if .exe download is available
-    fetch('/builds/CentralPessoal.exe', { method: 'HEAD' }).then(r => {
+    apiFetch('/builds/CentralPessoal.exe', { method: 'HEAD' }).then(r => {
       if (r.ok) {
         const btn = document.getElementById('dl-exe');
         const na = document.getElementById('dl-exe-na');
@@ -208,7 +234,7 @@ const Settings = {
     if (!key) { statusEl.textContent = '⚠️ Cole uma chave primeiro.'; return; }
     statusEl.textContent = '⏳ Testando...';
     try {
-      const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=test&type=video&maxResults=1&key=${key}`);
+      const res = await apiFetch(`/api/youtube/validate?key=${encodeURIComponent(key)}`);
       const data = await res.json();
       if (data.error) {
         statusEl.textContent = `❌ ${data.error.message}`;
@@ -223,11 +249,11 @@ const Settings = {
   // --- Google Drive ---
   driveConnect() {
     const clientId = this.data.driveClientId || document.getElementById('set-drive-client-id')?.value?.trim();
-    if (!clientId) { alert('Coloque seu Client ID do Google Cloud primeiro.'); return; }
+    if (!clientId) { Toast.warn('Coloque seu Client ID do Google Cloud primeiro.'); return; }
     this.data.driveClientId = clientId;
 
     if (typeof google === 'undefined' || !google.accounts) {
-      alert('Carregando Google Identity Services... Tente novamente.');
+      Toast.info('Carregando Google Identity Services... Tente novamente.');
       return;
     }
 
@@ -236,23 +262,23 @@ const Settings = {
       scope: 'https://www.googleapis.com/auth/drive.file',
       callback: (response) => {
         if (response.access_token) {
-          this.data.driveToken = response.access_token;
+          this._driveToken = response.access_token;
           this.save();
-          alert('✅ Google Drive conectado!');
+          Toast.success('Google Drive conectado!');
           this.open();
         } else if (response.error) {
-          alert('Erro: ' + response.error);
+          Toast.error('Erro: ' + response.error);
         }
       },
       error_callback: () => {
-        alert('Conexão cancelada ou erro de autenticação.');
+        Toast.warn('Conexão cancelada ou erro de autenticação.');
       },
     });
     client.requestAccessToken();
   },
 
   async driveBackup() {
-    if (!this.data.driveToken) { alert('Conecte ao Google Drive primeiro.'); return; }
+    if (!this._driveToken) { Toast.warn('Conecte ao Google Drive primeiro.'); return; }
     try {
       const backup = {};
       for (let i = 0; i < localStorage.length; i++) {
@@ -270,40 +296,43 @@ const Settings = {
 
       const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${this.data.driveToken}` },
+        headers: { Authorization: `Bearer ${this._driveToken}` },
         body: form,
       });
       const result = await res.json();
       if (result.id) {
-        alert(`✅ Backup salvo no Drive!\nArquivo: ${metadata.name}`);
+        Toast.success(`Backup salvo no Drive!\nArquivo: ${metadata.name}`);
       } else {
-        alert('Erro ao fazer backup: ' + (result.error?.message || 'desconhecido'));
+        Toast.error('Erro ao fazer backup: ' + (result.error?.message || 'desconhecido'));
+        if (result.error?.code === 401) {
+          this._driveToken = '';
+          this.save();
+        }
       }
     } catch (e) {
-      alert('Erro ao conectar com Drive. Token pode ter expirado. Reconecte.');
-      this.data.driveToken = '';
+      Toast.error('Erro ao conectar com Drive. Token pode ter expirado. Reconecte.');
+      this._driveToken = '';
       this.save();
     }
   },
 
   async driveRestore() {
-    if (!this.data.driveToken) { alert('Conecte ao Google Drive primeiro.'); return; }
-    if (!confirm('Restaurar vai SUBSTITUIR todos os dados atuais. Continuar?')) return;
+    if (!this._driveToken) { Toast.warn('Conecte ao Google Drive primeiro.'); return; }
+    if (!await Modal.confirm('Restaurar vai SUBSTITUIR todos os dados atuais. Continuar?')) return;
     try {
-      // List backup files
       const listRes = await fetch(
         `https://www.googleapis.com/drive/v3/files?q=name contains 'central-backup-' and mimeType='application/json'&orderBy=createdTime desc&pageSize=10`,
-        { headers: { Authorization: `Bearer ${this.data.driveToken}` } }
+        { headers: { Authorization: `Bearer ${this._driveToken}` } }
       );
       const list = await listRes.json();
       if (!list.files || list.files.length === 0) {
-        alert('Nenhum backup encontrado no Drive.');
+        Toast.info('Nenhum backup encontrado no Drive.');
         return;
       }
 
       const file = list.files[0];
       const dlRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
-        headers: { Authorization: `Bearer ${this.data.driveToken}` },
+        headers: { Authorization: `Bearer ${this._driveToken}` },
       });
       const data = await dlRes.json();
 
@@ -311,15 +340,15 @@ const Settings = {
       for (const [key, value] of Object.entries(data)) {
         if (key.startsWith('central_') && key !== '_backupDate' && key !== '_version') {
           localStorage.setItem(key, JSON.stringify(value));
-          try { await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) }); } catch {}
+          try { await apiFetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) }); } catch (e) { console.warn("settings: catch", e); }
           count++;
         }
       }
-      alert(`✅ ${count} dados restaurados de: ${file.name}\nRecarregue a página.`);
-      location.reload();
+      Toast.success(`${count} dados restaurados de: ${file.name}`);
+      setTimeout(() => location.reload(), 1500);
     } catch (e) {
-      alert('Erro ao restaurar: token pode ter expirado. Reconecte.');
-      this.data.driveToken = '';
+      Toast.error('Erro ao restaurar: token pode ter expirado. Reconecte.');
+      this._driveToken = '';
       this.save();
     }
   },
@@ -350,14 +379,14 @@ const Settings = {
         for (const [key, value] of Object.entries(data)) {
           if (key.startsWith('central_') && key !== '_exportDate') {
             localStorage.setItem(key, JSON.stringify(value));
-            fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) }).catch(() => {});
+            apiFetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) }).catch(() => {});
             count++;
           }
         }
-        alert(`✅ ${count} dados importados! Recarregando...`);
-        location.reload();
+        Toast.success(`${count} dados importados!`);
+        setTimeout(() => location.reload(), 1500);
       } catch {
-        alert('❌ Arquivo inválido.');
+        Toast.error('Arquivo inválido.');
       }
     };
     reader.readAsText(file);

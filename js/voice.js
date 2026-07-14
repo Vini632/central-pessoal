@@ -3,7 +3,7 @@ const Voice = {
   supported: 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window,
 
   start(textarea, btn) {
-    if (!this.supported) { alert('Reconhecimento de voz não suportado neste navegador.'); return; }
+    if (!this.supported) { Toast.error('Reconhecimento de voz não suportado neste navegador.'); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     this.recognition = new SR();
     this.recognition.lang = 'pt-BR';
@@ -31,7 +31,7 @@ const Voice = {
   },
 
   stop(btn) {
-    try { this.recognition?.stop(); } catch {}
+    try { this.recognition?.stop(); } catch (e) { console.warn("voice: catch", e); }
     this.recognition = null;
     if (btn) {
       btn.classList.remove('recording');

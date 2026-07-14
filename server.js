@@ -1,12 +1,43 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const { spawn } = require('child_process');
 const Database = require('better-sqlite3');
 
+// Load .env if present
+try {
+  const envPath = path.join(__dirname, '.env');
+  if (fs.existsSync(envPath)) {
+    for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let val = trimmed.slice(eq + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (!(key in process.env)) process.env[key] = val;
+    }
+  }
+} catch (e) { /* .env loading failed, continue with env vars */ }
+
 const PORT = parseInt(process.env.PORT || '3456', 10);
+const API_TOKEN = process.env.API_TOKEN || '';
 const OLLAMA_PORT = 11434;
+
+// Simple auth check
+function requireAuth(req, res) {
+  if (!API_TOKEN) return true;
+  const auth = req.headers['authorization'];
+  if (auth === `Bearer ${API_TOKEN}`) return true;
+  res.writeHead(401, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  res.end(JSON.stringify({ error: 'Não autorizado. Configure API_TOKEN no .env' }));
+  return false;
+}
 
 // Database setup
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'central.db');
@@ -57,6 +88,19 @@ db.exec(`
     date TEXT NOT NULL,
     done INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (habitId, date)
+  );
+  CREATE TABLE IF NOT EXISTS leitura (
+    id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    title TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    icon TEXT DEFAULT '',
+    read INTEGER DEFAULT 0,
+    added INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS kv_store (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
   );
 `);
 
@@ -123,6 +167,23 @@ function checkOllama() {
   });
 }
 
+let _ollamaReady = false;
+let _ollamaPromise = null;
+
+async function ensureOllama() {
+  if (_ollamaReady) return true;
+  if (_ollamaPromise) return _ollamaPromise; // wait for in-flight attempt
+  if (process.env.DISABLE_OLLAMA) return false;
+  _ollamaPromise = (async () => {
+    const running = await checkOllama();
+    if (running) { _ollamaReady = true; return true; }
+    const started = await startOllama();
+    _ollamaReady = started;
+    return started;
+  })();
+  return _ollamaPromise;
+}
+
 function startOllama() {
   return new Promise((resolve) => {
     const possiblePaths = [
@@ -164,8 +225,26 @@ function startOllama() {
   });
 }
 
+async function withOllama(req, res, handler) {
+  if (process.env.DISABLE_OLLAMA) {
+    res.writeHead(503, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ error: 'Ollama desabilitado' }));
+    return;
+  }
+  const ready = await ensureOllama();
+  if (!ready) {
+    res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ error: 'Ollama nao disponivel' }));
+    return;
+  }
+  handler();
+}
+
 const server = http.createServer((req, res) => {
   const url = req.url;
+
+  // Auth check for all /api/ routes
+  if (url.startsWith('/api/') && !requireAuth(req, res)) return;
 
   // API: Ollama status
   if (url === '/api/ollama/status') {
@@ -208,8 +287,8 @@ const server = http.createServer((req, res) => {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
     });
-    startOllama().then((started) => {
-      res.end(JSON.stringify({ started }));
+    ensureOllama().then(() => {
+      res.end(JSON.stringify({ started: _ollamaReady }));
     });
     return;
   }
@@ -231,7 +310,7 @@ const server = http.createServer((req, res) => {
 
   // API: List Ollama models (uses configured ollamaUrl)
   if (url === '/api/ollama/models') {
-    ollamaProxy('/api/tags', 'GET', null, res);
+    withOllama(req, res, () => ollamaProxy('/api/tags', 'GET', null, res));
     return;
   }
 
@@ -240,7 +319,7 @@ const server = http.createServer((req, res) => {
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
     req.on('end', () => {
-      ollamaProxy('/api/generate', 'POST', body, res);
+      withOllama(req, res, () => ollamaProxy('/api/generate', 'POST', body, res));
     });
     return;
   }
@@ -258,10 +337,20 @@ const server = http.createServer((req, res) => {
       central_events: dbAll('events'),
       central_habits: dbAll('habits'),
       central_habit_logs: dbAll('habit_logs'),
+      central_leitura: dbAll('leitura'),
       central_settings: {},
     };
     const allSettings = dbAll('settings');
     for (const s of allSettings) data.central_settings[s.key] = s.value;
+    // Strip sensitive keys from frontend response
+    delete data.central_settings.youtubeApiKey;
+    delete data.central_settings.driveToken;
+    const allKv = dbAll('kv_store');
+    for (const kv of allKv) {
+      if (!(kv.key in data)) {
+        try { data[kv.key] = JSON.parse(kv.value); } catch { data[kv.key] = kv.value; }
+      }
+    }
     res.end(JSON.stringify(data));
     return;
   }
@@ -279,6 +368,7 @@ const server = http.createServer((req, res) => {
           central_events: 'events',
           central_habits: 'habits',
           central_habit_logs: 'habit_logs',
+          central_leitura: 'leitura',
         };
         for (const [key, table] of Object.entries(tables)) {
           if (Array.isArray(input[key])) {
@@ -290,6 +380,19 @@ const server = http.createServer((req, res) => {
           db.prepare('DELETE FROM settings').run();
           for (const [k, v] of Object.entries(input.central_settings)) {
             db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(k, String(v));
+          }
+        }
+        // Save any unknown central_* keys to kv_store
+        const knownTables = new Set(Object.keys(tables));
+        knownTables.add('central_settings');
+        for (const [key, val] of Object.entries(input)) {
+          if (key.startsWith('central_') && !knownTables.has(key)) {
+            if (val === null) {
+              db.prepare('DELETE FROM kv_store WHERE key = ?').run(key);
+            } else {
+              const value = typeof val === 'string' ? val : JSON.stringify(val);
+              db.prepare('INSERT OR REPLACE INTO kv_store (key, value) VALUES (?, ?)').run(key, value);
+            }
           }
         }
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
@@ -357,7 +460,7 @@ const server = http.createServer((req, res) => {
         const { q } = JSON.parse(body);
         if (!q) throw new Error('Query required');
         // Use DuckDuckGo Instant Answer API
-        http.get(`http://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`, (apiRes) => {
+        const ddgReq = https.get(`https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`, (apiRes) => {
           let data = '';
           apiRes.on('data', (chunk) => { data += chunk; });
           apiRes.on('end', () => {
@@ -370,7 +473,6 @@ const server = http.createServer((req, res) => {
                   if (r.Text) text += r.Text + '\n';
                 }
               }
-              // Also get web results via HTML scrape as fallback
               if (!text) {
                 text = result.Abstract || result.Definition || '';
               }
@@ -381,7 +483,9 @@ const server = http.createServer((req, res) => {
               res.end(JSON.stringify({ content: '', source: 'DuckDuckGo' }));
             }
           });
-        }).on('error', (e) => {
+        });
+        ddgReq.setTimeout(10000, () => { ddgReq.destroy(); try { res.writeHead(504); res.end(JSON.stringify({ error: 'Timeout' })); } catch (e) { console.warn("server: catch", e); } });
+        ddgReq.on('error', (e) => {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: e.message }));
         });
@@ -401,7 +505,7 @@ const server = http.createServer((req, res) => {
       try {
         const { url: targetUrl } = JSON.parse(body);
         if (!targetUrl) throw new Error('URL required');
-        http.get(targetUrl, (targetRes) => {
+        const metaReq = http.get(targetUrl, (targetRes) => {
           let data = '';
           targetRes.on('data', (chunk) => { data += chunk; });
           targetRes.on('end', () => {
@@ -412,7 +516,9 @@ const server = http.createServer((req, res) => {
             res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
             res.end(JSON.stringify({ title, description: desc, icon: fullIcon }));
           });
-        }).on('error', (e) => {
+        });
+        metaReq.setTimeout(10000, () => { metaReq.destroy(); try { res.writeHead(504); res.end(JSON.stringify({ error: 'Timeout' })); } catch (e) { console.warn("server: catch", e); } });
+        metaReq.on('error', (e) => {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: e.message }));
         });
@@ -432,11 +538,10 @@ const server = http.createServer((req, res) => {
       try {
         const { url: targetUrl } = JSON.parse(body);
         if (!targetUrl) throw new Error('URL required');
-        http.get(targetUrl, (targetRes) => {
+        const fetchReq = http.get(targetUrl, (targetRes) => {
           let data = '';
           targetRes.on('data', (chunk) => { data += chunk; });
           targetRes.on('end', () => {
-            // Extract text content
             const text = data
               .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
               .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -447,10 +552,100 @@ const server = http.createServer((req, res) => {
             res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
             res.end(JSON.stringify({ content: text, title: data.match(/<title>([^<]*)<\/title>/i)?.[1] || '' }));
           });
-        }).on('error', (e) => {
+        });
+        fetchReq.setTimeout(10000, () => { fetchReq.destroy(); try { res.writeHead(504); res.end(JSON.stringify({ error: 'Timeout' })); } catch (e) { console.warn("server: catch", e); } });
+        fetchReq.on('error', (e) => {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: e.message }));
         });
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // API: YouTube search proxy
+  if (url.startsWith('/api/youtube/search') && req.method === 'GET') {
+    const q = new URL(url, 'http://localhost').searchParams.get('q');
+    if (!q) { res.writeHead(400); res.end(JSON.stringify({ error: 'Query required' })); return; }
+    const settings = db.prepare("SELECT value FROM settings WHERE key = 'youtubeApiKey'").get();
+    const apiKey = settings?.value;
+    if (!apiKey) { res.writeHead(400); res.end(JSON.stringify({ error: 'YouTube API Key nao configurada' })); return; }
+    const ytReq = https.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&maxResults=10&key=${apiKey}`, (ytRes) => {
+      let data = '';
+      ytRes.on('data', (chunk) => { data += chunk; });
+      ytRes.on('end', () => {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(data);
+      });
+    });
+    ytReq.setTimeout(15000, () => { ytReq.destroy(); try { res.writeHead(504); res.end(JSON.stringify({ error: 'Timeout' })); } catch {} });
+    ytReq.on('error', (e) => { res.writeHead(502); res.end(JSON.stringify({ error: e.message })); });
+    return;
+  }
+
+  // API: YouTube playlist items proxy
+  if (url.startsWith('/api/youtube/playlist') && req.method === 'GET') {
+    const playlistId = new URL(url, 'http://localhost').searchParams.get('id');
+    if (!playlistId) { res.writeHead(400); res.end(JSON.stringify({ error: 'Playlist ID required' })); return; }
+    const settings = db.prepare("SELECT value FROM settings WHERE key = 'youtubeApiKey'").get();
+    const apiKey = settings?.value;
+    if (!apiKey) { res.writeHead(400); res.end(JSON.stringify({ error: 'YouTube API Key nao configurada' })); return; }
+    const ytReq = https.get(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}`, (ytRes) => {
+      let data = '';
+      ytRes.on('data', (chunk) => { data += chunk; });
+      ytRes.on('end', () => {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(data);
+      });
+    });
+    ytReq.setTimeout(15000, () => { ytReq.destroy(); try { res.writeHead(504); res.end(JSON.stringify({ error: 'Timeout' })); } catch {} });
+    ytReq.on('error', (e) => { res.writeHead(502); res.end(JSON.stringify({ error: e.message })); });
+    return;
+  }
+
+  // API: YouTube validate key proxy
+  if (url.startsWith('/api/youtube/validate') && req.method === 'GET') {
+    const key = new URL(url, 'http://localhost').searchParams.get('key');
+    if (!key) { res.writeHead(400); res.end(JSON.stringify({ error: 'Key required' })); return; }
+    const ytReq = https.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=test&type=video&maxResults=1&key=${key}`, (ytRes) => {
+      let data = '';
+      ytRes.on('data', (chunk) => { data += chunk; });
+      ytRes.on('end', () => {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(data);
+      });
+    });
+    ytReq.setTimeout(15000, () => { ytReq.destroy(); try { res.writeHead(504); res.end(JSON.stringify({ error: 'Timeout' })); } catch {} });
+    ytReq.on('error', (e) => { res.writeHead(502); res.end(JSON.stringify({ error: e.message })); });
+    return;
+  }
+
+  // API: Sensitive settings (YouTube key, Drive token) — server-side only
+  if (url.startsWith('/api/settings/') && req.method === 'GET') {
+    const keyName = url.replace('/api/settings/', '');
+    const allowed = ['youtubeApiKey', 'driveToken'];
+    if (!allowed.includes(keyName)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Unknown key' })); return; }
+    const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(keyName);
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ key: keyName, value: row?.value || '' }));
+    return;
+  }
+
+  if (url.startsWith('/api/settings/') && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const input = JSON.parse(body);
+        const keyName = url.replace('/api/settings/', '');
+        const allowed = ['youtubeApiKey', 'driveToken'];
+        if (!allowed.includes(keyName)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Unknown key' })); return; }
+        db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(keyName, String(input.value));
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ ok: true }));
       } catch (e) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message }));
@@ -468,6 +663,9 @@ const server = http.createServer((req, res) => {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('404');
       return;
+    }
+    if (ext === '.html') {
+      data = data.toString().replace('__API_TOKEN__', API_TOKEN);
     }
     const cacheControl = ext === '.html' || ext === '.js' || ext === '.css' ? 'no-cache, no-store, must-revalidate' : 'max-age=0, must-revalidate';
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cacheControl });
@@ -504,6 +702,8 @@ wss.on('connection', (ws) => {
   ws.on('error', () => shell.kill());
 });
 
+module.exports = server;
+
 server.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n  🖥  Central Pessoal rodando em:`);
   console.log(`  ─────────────────────────────────────`);
@@ -518,22 +718,17 @@ server.listen(PORT, '0.0.0.0', async () => {
         }
       }
     }
-  } catch {}
+  } catch (e) { console.warn("server: catch", e); }
   console.log(`  → Terminal via WebSocket ativo`);
   console.log(`  → 🗄  SQLite: ${DB_PATH}`);
 
-  // Auto-start Ollama (skip if DISABLE_OLLAMA is set, e.g. on Render)
+  // Ollama: lazy — só verifica/inicia na primeira requisição /api/ollama/*
   if (process.env.DISABLE_OLLAMA) {
     console.log(`  → 🤖 Ollama: desabilitado`);
   } else {
-    const ollamaRunning = await checkOllama();
-    if (ollamaRunning) {
-      console.log(`  → 🤖 Ollama: rodando`);
-    } else {
-      console.log(`  → 🤖 Ollama: iniciando...`);
-      const started = await startOllama();
-      console.log(`  → 🤖 Ollama: ${started ? 'iniciado!' : 'nao encontrado'}`);
-    }
+    ensureOllama().then((ready) => {
+      console.log(`  → 🤖 Ollama: ${ready ? 'rodando' : 'nao encontrado (lazy)'}`);
+    });
   }
   console.log();
 });

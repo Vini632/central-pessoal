@@ -19,16 +19,23 @@ if %errorlevel% neq 0 (
 :: Mata processos antigos
 echo Limpando processos anteriores...
 taskkill /f /im cloudflared.exe >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3456 "') do taskkill /f /pid %%a >nul 2>&1
+powershell -NoLogo -Command "Get-Process -Id (Get-NetTCPConnection -LocalPort 3456 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force" 2>nul
 timeout /t 2 /nobreak >nul
 
+:: Inicia Satella Bot (se disponivel)
+if exist "iniciar-bot.bat" (
+    echo [0/3] Iniciando Satella Bot...
+    call iniciar-bot.bat
+    timeout /t 3 /nobreak >nul
+)
+
 :: Inicia servidor
-echo [1/2] Iniciando servidor...
+echo [2/3] Iniciando servidor...
 start /B node server.js > nul 2>&1
 timeout /t 3 /nobreak >nul
 
 :: Inicia Cloudflare Tunnel
-echo [2/2] Conectando ao Cloudflare...
+echo [3/3] Conectando ao Cloudflare...
 echo.
 del tunnel.log 2>nul
 start /B cloudflared tunnel --url http://localhost:3456 > tunnel.log 2>&1

@@ -74,7 +74,7 @@ const Player = {
           <div class="yt-panel" id="yt-panel-queue">
             <div id="yt-queue-list"></div>
             <div id="yt-queue-empty" style="text-align:center;padding:20px;color:var(--text-tertiary)">Fila vazia</div>
-            ${this.queue.length > 0 ? '<button id="yt-queue-clear" class="btn-secondary" style="margin-top:8px;padding:6px 12px;font-size:11px">LIMPAR FILA</button>' : ''}
+            <button id="yt-queue-clear" class="btn-secondary" style="margin-top:8px;padding:6px 12px;font-size:11px;display:none">LIMPAR FILA</button>
           </div>
 
           <div class="yt-panel" id="yt-panel-history">
@@ -143,7 +143,7 @@ const Player = {
     document.getElementById('yt-pl-import-btn').addEventListener('click', () => {
       const input = document.getElementById('yt-pl-import-url');
       const parsed = this.extractId(input.value.trim());
-      if (!parsed || parsed.type !== 'playlist') { alert('Cole uma URL de playlist do YouTube válida.'); return; }
+      if (!parsed || parsed.type !== 'playlist') { Toast.warn('Cole uma URL de playlist do YouTube válida.'); return; }
       this.importYTPlaylist(parsed.id);
     });
     document.getElementById('yt-playlist-name').addEventListener('keydown', (e) => {
@@ -405,13 +405,16 @@ const Player = {
   renderQueue() {
     const list = document.getElementById('yt-queue-list');
     const empty = document.getElementById('yt-queue-empty');
+    const clearBtn = document.getElementById('yt-queue-clear');
     if (!list) return;
     if (this.queue.length === 0) {
       list.innerHTML = '';
       if (empty) empty.style.display = 'block';
+      if (clearBtn) clearBtn.style.display = 'none';
       return;
     }
     if (empty) empty.style.display = 'none';
+    if (clearBtn) clearBtn.style.display = '';
     list.innerHTML = this.queue.map((item, i) => `
       <div class="yt-queue-item ${i === this.queueIndex ? 'active' : ''}" data-index="${i}">
         <span class="yt-qi-num">${i + 1}</span>
@@ -439,20 +442,14 @@ const Player = {
     const q = input.value.trim();
     if (!q) return;
 
-    const apiKey = Settings.get('youtubeApiKey');
-    if (!apiKey) {
-      document.getElementById('yt-search-results').innerHTML = '<div class="yt-search-info">Configure a YouTube API Key nas Configurações</div>';
-      return;
-    }
-
     document.getElementById('yt-search-results').innerHTML = '<div class="yt-search-info">Buscando...</div>';
 
     try {
-      const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&maxResults=10&key=${apiKey}`);
+      const res = await apiFetch(`/api/youtube/search?q=${encodeURIComponent(q)}`);
       const data = await res.json();
 
       if (data.error) {
-        document.getElementById('yt-search-results').innerHTML = `<div class="yt-search-info">Erro: ${data.error.message}</div>`;
+        document.getElementById('yt-search-results').innerHTML = `<div class="yt-search-info">Erro: ${data.error}</div>`;
         return;
       }
 
@@ -512,8 +509,8 @@ const Player = {
     } catch { this.history = []; }
   },
 
-  clearHistory() {
-    if (!confirm('Limpar histórico?')) return;
+  async clearHistory() {
+    if (!await Modal.confirm('Limpar histórico?')) return;
     this.history = [];
     this.saveHistory();
     this.renderHistory();
@@ -564,8 +561,8 @@ const Player = {
     this.renderPlaylists();
   },
 
-  deletePlaylist(id) {
-    if (!confirm('Excluir playlist?')) return;
+  async deletePlaylist(id) {
+    if (!await Modal.confirm('Excluir playlist?')) return;
     this.playlists = this.playlists.filter(p => p.id !== id);
     this.savePlaylists();
     this.renderPlaylists();
@@ -574,7 +571,7 @@ const Player = {
   addToPlaylist(playlistId, videoId, title) {
     const pl = this.playlists.find(p => p.id === playlistId);
     if (!pl) return;
-    if (pl.videos.some(v => v.id === videoId)) { alert('Já está na playlist.'); return; }
+    if (pl.videos.some(v => v.id === videoId)) { Toast.warn('Já está na playlist.'); return; }
     pl.videos.push({ id: videoId, title: title || videoId, added: Date.now() });
     this.savePlaylists();
     this.renderPlaylists();
@@ -613,19 +610,18 @@ const Player = {
   },
 
   async importYTPlaylist(playlistId) {
-    const apiKey = Settings.get('youtubeApiKey');
-    if (!apiKey) { alert('Configure a YouTube API Key nas Configurações primeiro.'); return; }
-    if (!this.playlists.length) { alert('Crie uma playlist primeiro.'); return; }
-    const plName = prompt('Qual playlist adicionar os vídeos?\n\n' + this.playlists.map((p,i) => `${i+1}. ${p.name} (${p.videos.length} vídeos)`).join('\n') + '\n\nDigite o número:');
+    if (!this.playlists.length) { Toast.warn('Crie uma playlist primeiro.'); return; }
+    const list = this.playlists.map((p,i) => `${i+1}. ${p.name} (${p.videos.length} vídeos)`).join('\n');
+    const plName = await Modal.prompt(`Qual playlist adicionar os vídeos?\n\n${list}\n\nDigite o número:`);
     if (!plName) return;
     const idx = parseInt(plName) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= this.playlists.length) { alert('Número inválido.'); return; }
+    if (isNaN(idx) || idx < 0 || idx >= this.playlists.length) { Toast.warn('Número inválido.'); return; }
     const target = this.playlists[idx];
     try {
-      const res = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}`);
+      const res = await apiFetch(`/api/youtube/playlist?id=${playlistId}`);
       const data = await res.json();
-      if (data.error) { alert('Erro: ' + data.error.message); return; }
-      if (!data.items || data.items.length === 0) { alert('Nenhum vídeo encontrado na playlist.'); return; }
+      if (data.error) { Toast.error('Erro: ' + data.error); return; }
+      if (!data.items || data.items.length === 0) { Toast.info('Nenhum vídeo encontrado na playlist.'); return; }
       let added = 0;
       for (const item of data.items) {
         const vid = item.snippet.resourceId.videoId;
@@ -637,9 +633,9 @@ const Player = {
       }
       this.savePlaylists();
       this.renderPlaylists();
-      alert(`✅ ${added} vídeos importados para "${target.name}"!`);
+      Toast.success(`✅ ${added} vídeos importados para "${target.name}"!`);
     } catch (e) {
-      alert('Erro ao importar: ' + e.message);
+      Toast.error('Erro ao importar: ' + e.message);
     }
   },
 
@@ -684,7 +680,7 @@ const Player = {
       b.addEventListener('click', () => {
         const id = b.dataset.playlist;
         const results = document.querySelectorAll('.yt-search-item');
-        if (!results.length) { alert('Faça uma busca primeiro e clique em + ao lado dos resultados.'); return; }
+        if (!results.length) { Toast.warn('Faça uma busca primeiro e clique em + ao lado dos resultados.'); return; }
         results.forEach(el => {
           const exist = el.querySelector('.yt-si-pl-add');
           if (!exist) {

@@ -25,7 +25,7 @@ const Clock = {
           await this.fetchForecast(lat, lon, savedCity);
           return;
         }
-      } catch {}
+      } catch (e) { console.warn("clock: catch", e); }
     }
 
     try {
@@ -43,7 +43,7 @@ const Clock = {
           await this.fetchForecast(ipData.lat, ipData.lon, ipData.city);
           return;
         }
-      } catch {}
+      } catch (e) { console.warn("clock: catch", e); }
       document.getElementById('weather-temp').textContent = '--°C';
       document.getElementById('weather-desc').textContent = 'Clima indisponível';
       document.getElementById('weather-forecast').innerHTML = '';

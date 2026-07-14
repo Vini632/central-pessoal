@@ -1,8 +1,10 @@
-const CACHE = 'central-v3';
+const CACHE = 'central-v4';
 const ASSETS = [
   '/',
   '/index.html',
-  '/css/style.css',
+  '/css/base.css',
+  '/css/modules.css',
+  '/css/responsive.css',
   '/js/data.js',
   '/js/voice.js',
   '/js/main.js',
@@ -19,6 +21,8 @@ const ASSETS = [
   '/js/modules/player.js',
   '/js/modules/ai.js',
   '/js/modules/game.js',
+  '/js/modules/leitura.js',
+  '/js/modules/bot.js',
   '/favicon.svg',
   '/manifest.json',
 ];

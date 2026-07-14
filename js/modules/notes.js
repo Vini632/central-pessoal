@@ -151,29 +151,15 @@ const Notes = {
     const note = this.data.find(n => n.id === id);
     if (!note || !files.length) return;
     if (!note.images) note.images = [];
+    let loaded = 0;
     for (const file of files) {
       const reader = new FileReader();
       reader.onload = (e) => {
         note.images.push(e.target.result);
-        if (files.length === 1 || note.images.length >= (note.images.length + files.length - 1)) {
-          this.save();
-          this.render();
-        }
+        loaded++;
+        if (loaded === files.length) { this.save(); this.render(); }
       };
       reader.readAsDataURL(file);
-    }
-    // Save on last image load
-    if (files.length > 1) {
-      let loaded = 0;
-      for (const file of files) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          note.images.push(e.target.result);
-          loaded++;
-          if (loaded === files.length) { this.save(); this.render(); }
-        };
-        reader.readAsDataURL(file);
-      }
     }
   },
 

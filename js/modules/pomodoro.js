@@ -27,7 +27,7 @@ const Pomodoro = {
   },
 
   save() {
-    try { localStorage.setItem('central_pomo_sessions', String(this.sessions)); } catch {}
+    try { Data.save('central_pomo_sessions', this.sessions); } catch (e) { console.warn("pomodoro: catch", e); }
   },
 
   setMode(mode) {
@@ -117,7 +117,7 @@ const Pomodoro = {
         osc2.start(ctx.currentTime);
         osc2.stop(ctx.currentTime + 0.3);
       }, 250);
-    } catch {}
+    } catch (e) { console.warn("pomodoro: catch", e); }
   },
 
   updateDisplay() {

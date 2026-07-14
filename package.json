@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "terminal": "node server.js",
+    "test": "node --test test/*.test.js",
     "electron": "electron .",
     "build:exe": "npx electron-builder --win --x64 --publish never",
     "build:exe:simple": "npx @electron/packager . CentralPessoal --platform=win32 --arch=x64 --out=dist --overwrite"
