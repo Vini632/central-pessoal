@@ -3,6 +3,7 @@ const Escrita = {
   currentFile: null,
   previewMode: false,
   dirty: false,
+  aiLoading: false,
 
   init() {
     const section = document.getElementById('mod-escrita');
@@ -12,7 +13,10 @@ const Escrita = {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           Escrita — Castelo Aurora
         </h2>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="escrita-ai-toggle" class="btn-icon" title="IA de Escrita">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
+          </button>
           <button id="escrita-refresh" class="btn-icon" title="Recarregar árvore">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
           </button>
@@ -37,6 +41,22 @@ const Escrita = {
             <p>Selecione um arquivo na árvore para editar</p>
           </div>
         </div>
+      </div>
+      <div id="escrita-ai-panel" style="display:none">
+        <div id="escrita-ai-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
+          <span>IA de Escrita</span>
+          <div style="margin-left:auto;display:flex;gap:4px">
+            <button class="escrita-ai-quick" data-prompt="Continue esta cena no mesmo estilo e tom">Continuar</button>
+            <button class="escrita-ai-quick" data-prompt="Sugira ideias para o que pode acontecer a seguir">Sugerir</button>
+            <button class="escrita-ai-quick" data-prompt="Revise este texto: aponte problemas de ritmo, diálogo e consistência">Revisar</button>
+          </div>
+        </div>
+        <div id="escrita-ai-input-row">
+          <input id="escrita-ai-input" type="text" placeholder="O que você quer que a IA faça?" autocomplete="off">
+          <button id="escrita-ai-send" class="btn-primary" style="padding:6px 14px;font-size:12px">Enviar</button>
+        </div>
+        <div id="escrita-ai-response"></div>
       </div>`;
     this.loadTree();
     document.getElementById('escrita-refresh').addEventListener('click', () => this.loadTree());
@@ -49,7 +69,78 @@ const Escrita = {
       this.dirty = true;
       document.getElementById('escrita-save').disabled = false;
     });
+    document.getElementById('escrita-ai-toggle').addEventListener('click', () => this._toggleAi());
+    document.getElementById('escrita-ai-send').addEventListener('click', () => this._askAi());
+    document.getElementById('escrita-ai-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this._askAi();
+    });
+    document.querySelectorAll('.escrita-ai-quick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('escrita-ai-input').value = btn.dataset.prompt;
+        this._askAi();
+      });
+    });
     this._addKeybindings();
+  },
+
+  _toggleAi() {
+    const panel = document.getElementById('escrita-ai-panel');
+    const editor = document.getElementById('escrita-editor');
+    if (panel.style.display === 'none') {
+      panel.style.display = 'block';
+      editor.style.borderBottom = 'none';
+      editor.style.borderRadius = '8px 8px 0 0';
+    } else {
+      panel.style.display = 'none';
+      editor.style.borderBottom = '';
+      editor.style.borderRadius = '';
+    }
+  },
+
+  async _askAi() {
+    const input = document.getElementById('escrita-ai-input');
+    const responseEl = document.getElementById('escrita-ai-response');
+    const prompt = input.value.trim();
+    if (!prompt || this.aiLoading) return;
+
+    this.aiLoading = true;
+    document.getElementById('escrita-ai-send').disabled = true;
+    input.disabled = true;
+    responseEl.innerHTML = '<div class="escrita-ai-thinking">Pensando...</div>';
+
+    const textarea = document.getElementById('escrita-textarea');
+    const currentText = textarea.style.display !== 'none' ? textarea.value : '';
+
+    try {
+      const res = await apiFetch('/api/escrita/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, currentText }),
+      });
+      const data = await res.json();
+      responseEl.innerHTML = data.content
+        ? `<div class="escrita-ai-msg">${marked.parse(data.content)}</div>
+           <button class="escrita-ai-insert" onclick="Escrita._insertAi('${data.content.replace(/`/g, '\\`').replace(/'/g, "\\'").replace(/\n/g, '\\n')}')">Inserir no texto</button>`
+        : '<div class="escrita-ai-msg" style="color:var(--red)">Resposta vazia</div>';
+    } catch (e) {
+      responseEl.innerHTML = '<div class="escrita-ai-msg" style="color:var(--red)">Erro ao contactar IA</div>';
+    }
+    this.aiLoading = false;
+    document.getElementById('escrita-ai-send').disabled = false;
+    input.disabled = false;
+    input.focus();
+  },
+
+  _insertAi(text) {
+    const textarea = document.getElementById('escrita-textarea');
+    const start = textarea.selectionStart;
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(textarea.selectionEnd);
+    textarea.value = before + text + after;
+    const pos = start + text.length;
+    textarea.selectionStart = textarea.selectionEnd = pos;
+    textarea.dispatchEvent(new Event('input'));
+    Toast.success('Texto inserido!');
   },
 
   _addKeybindings() {

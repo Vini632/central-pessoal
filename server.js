@@ -681,6 +681,70 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // API: Escrita — IA (assistente de escrita via Ollama)
+  if (url === '/api/escrita/ai' && req.method === 'POST') {
+    const instrucoesPath = path.join(__dirname, 'IA_ESCRITA_INSTRUCOES.md');
+    let systemPrompt = 'Você é uma assistente de escrita criativa.';
+    try { systemPrompt = fs.readFileSync(instrucoesPath, 'utf-8'); } catch {}
+
+    const aiUrl = process.env.OLLAMA_URL || `http://localhost:${OLLAMA_PORT}`;
+    const model = process.env.ESCRITA_MODEL || 'llama3:latest';
+
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const { prompt, currentText } = JSON.parse(body);
+        if (!prompt) { res.writeHead(400); res.end(JSON.stringify({ error: 'prompt obrigatório' })); return; }
+
+        const fullPrompt = currentText
+          ? `Contexto (texto atual do usuário):\n${currentText.slice(-4000)}\n\n---\n\nInstrução do usuário: ${prompt}`
+          : prompt;
+
+        const payload = JSON.stringify({
+          model,
+          prompt: fullPrompt,
+          system: systemPrompt,
+          stream: false,
+          options: { temperature: 0.8, num_predict: 1024 },
+        });
+
+        const http = require('http');
+        const options = {
+          hostname: new URL(aiUrl).hostname,
+          port: new URL(aiUrl).port || OLLAMA_PORT,
+          path: '/api/generate',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 30000,
+        };
+
+        const ollamaReq = http.request(options, (ollamaRes) => {
+          let data = '';
+          ollamaRes.on('data', chunk => data += chunk);
+          ollamaRes.on('end', () => {
+            try {
+              const result = JSON.parse(data);
+              const content = result.response || '';
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ content }));
+            } catch {
+              res.writeHead(502); res.end(JSON.stringify({ error: 'Resposta inválida da IA' }));
+            }
+          });
+        });
+        ollamaReq.on('error', (e) => {
+          res.writeHead(502); res.end(JSON.stringify({ error: e.message }));
+        });
+        ollamaReq.write(payload);
+        ollamaReq.end();
+      } catch (e) {
+        res.writeHead(400); res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
   // API: Escrita (ler/escrever arquivos do livro)
   if (url.startsWith('/api/escrita')) {
     const bookDir = path.join(__dirname, 'Castelo Aurora');
