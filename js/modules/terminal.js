@@ -54,7 +54,8 @@ const TerminalModule = {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = window.location.port || (protocol === 'wss:' ? '443' : '80');
-    const url = `${protocol}//${host}:${port}/terminal`;
+    const token = document.querySelector('meta[name="api-token"]')?.content;
+    const url = `${protocol}//${host}:${port}/terminal${token ? '?token=' + token : ''}`;
     this.writeln(`Conectando a ${url}...`);
     try {
       this.ws = new WebSocket(url);
@@ -153,7 +154,9 @@ const TerminalModule = {
         store.forEach((l, i) => this.writeln(`  ${i + 1}. ${l.title} -> ${l.url}`));
       },
       connect: () => {
-        const url = args[0] || 'ws://localhost:3456/terminal';
+        const baseUrl = args[0] || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:${window.location.port || '80'}/terminal`;
+        const token = document.querySelector('meta[name="api-token"]')?.content;
+        const url = token ? baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'token=' + token : baseUrl;
         this.writeln(`Conectando a ${url}...`);
         try {
           this.ws = new WebSocket(url);

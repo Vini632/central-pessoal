@@ -29,6 +29,30 @@ const PORT = parseInt(process.env.PORT || '3456', 10);
 const API_TOKEN = process.env.API_TOKEN || '';
 const OLLAMA_PORT = 11434;
 
+// Rate limiting
+const rateLimit = {
+  window: 10000, // 10 segundos
+  maxPerWindow: 60, // max requests por janela
+  store: new Map(),
+};
+function checkRateLimit(req, res) {
+  if (!API_TOKEN) return true; // sem token, sem rate limit (dev mode)
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const entry = rateLimit.store.get(ip) || { count: 0, reset: now + rateLimit.window };
+  if (now > entry.reset) { entry.count = 0; entry.reset = now + rateLimit.window; }
+  entry.count++;
+  rateLimit.store.set(ip, entry);
+  // Limpar armazenamento a cada 100 inserções
+  if (rateLimit.store.size > 10000) rateLimit.store.clear();
+  if (entry.count > rateLimit.maxPerWindow) {
+    res.writeHead(429, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Retry-After': Math.ceil((entry.reset - now) / 1000) });
+    res.end(JSON.stringify({ error: 'Muitas requisições. Aguarde.' }));
+    return false;
+  }
+  return true;
+}
+
 // Simple auth check
 function requireAuth(req, res) {
   if (!API_TOKEN) return true;
@@ -243,8 +267,11 @@ async function withOllama(req, res, handler) {
 const server = http.createServer((req, res) => {
   const url = req.url;
 
-  // Auth check for all /api/ routes
-  if (url.startsWith('/api/') && !requireAuth(req, res)) return;
+  // Auth + rate limit for all /api/ routes
+  if (url.startsWith('/api/')) {
+    if (!requireAuth(req, res)) return;
+    if (!checkRateLimit(req, res)) return;
+  }
 
   // API: Ollama status
   if (url === '/api/ollama/status') {
@@ -654,8 +681,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Static files
-  let filePath = path.join(__dirname, url === '/' ? 'index.html' : url.split('?')[0]);
+  // Static files (com proteção contra path traversal)
+  let rawPath = url === '/' ? 'index.html' : url.split('?')[0];
+  let filePath = path.join(__dirname, rawPath);
+  // Garantir que o arquivo resolvido esteja dentro de __dirname
+  if (!filePath.startsWith(__dirname.replace(/[/\\]$/, '') + path.sep) && filePath !== __dirname.replace(/[/\\]$/, '')) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('403');
+    return;
+  }
   const ext = path.extname(filePath);
 
   fs.readFile(filePath, (err, data) => {
@@ -673,8 +707,17 @@ const server = http.createServer((req, res) => {
   });
 });
 
-// WebSocket — Terminal
-const wss = new WebSocketServer({ server, path: '/terminal' });
+// WebSocket — Terminal (com auth via query param)
+const wss = new WebSocketServer({
+  server,
+  path: '/terminal',
+  verifyClient: (info, cb) => {
+    if (!API_TOKEN) { cb(true); return; }
+    const params = new URL(info.req.url, 'http://localhost').searchParams;
+    const token = params.get('token');
+    cb(token === API_TOKEN);
+  },
+});
 
 wss.on('connection', (ws) => {
   const shell = spawn('cmd.exe', [], {
