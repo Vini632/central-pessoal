@@ -335,7 +335,8 @@ const Escrita = {
     const treeList = document.getElementById('escrita-tree-list');
     treeList.innerHTML = '<div style="padding:16px;opacity:0.5">Carregando...</div>';
     try {
-      const data = await apiFetch('/api/escrita');
+      const res = await apiFetch('/api/escrita');
+      const data = await res.json();
       this.tree = data;
       treeList.innerHTML = this._renderTree(data);
       treeList.querySelectorAll('.tree-item').forEach(item => {
@@ -387,7 +388,8 @@ const Escrita = {
     const sel = treeList.querySelector(`.tree-item[data-path="${filePath}"]`);
     if (sel) sel.classList.add('active');
     try {
-      const data = await apiFetch(`/api/escrita?path=${encodeURIComponent(filePath)}`);
+      const res = await apiFetch(`/api/escrita?path=${encodeURIComponent(filePath)}`);
+      const data = await res.json();
       document.getElementById('escrita-filename').textContent = filePath;
       const textarea = document.getElementById('escrita-textarea');
       textarea.value = data.content || '';
