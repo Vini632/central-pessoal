@@ -1,9 +1,10 @@
+// eslint-disable-next-line no-unused-vars
 const Bot = {
   data: null,
   guilds: null,
   logs: null,
   timer: null,
-  botUrl: 'http://localhost:8000',
+  botUrl: "http://localhost:8000",
 
   init() {
     this.load();
@@ -12,12 +13,12 @@ const Bot = {
   },
 
   load() {
-    const saved = Data.get('central_bot_url');
+    const saved = Data.get("central_bot_url");
     if (saved) this.botUrl = saved;
   },
 
   save() {
-    Data.save('central_bot_url', this.botUrl);
+    Data.save("central_bot_url", this.botUrl);
   },
 
   startPolling() {
@@ -26,7 +27,10 @@ const Bot = {
   },
 
   stopPolling() {
-    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
   },
 
   async fetch() {
@@ -34,7 +38,7 @@ const Bot = {
     this._fetching = true;
     try {
       const res = await fetch(`${this.botUrl}/api/bot/status`);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) throw new Error("HTTP " + res.status);
       this.data = await res.json();
       // Start polling only on first successful connect
       if (!this.timer) this.startPolling();
@@ -48,12 +52,12 @@ const Bot = {
   },
 
   async open() {
-    const overlay = document.getElementById('modal-overlay');
-    document.getElementById('modal-title').textContent = 'Satella Bot';
-    document.getElementById('modal-confirm').style.display = 'none';
-    document.getElementById('modal-cancel').textContent = 'FECHAR';
-    document.getElementById('modal-cancel').onclick = () => this.close();
-    document.getElementById('modal-close').onclick = () => this.close();
+    const overlay = document.getElementById("modal-overlay");
+    document.getElementById("modal-title").textContent = "Satella Bot";
+    document.getElementById("modal-confirm").style.display = "none";
+    document.getElementById("modal-cancel").textContent = "FECHAR";
+    document.getElementById("modal-cancel").onclick = () => this.close();
+    document.getElementById("modal-close").onclick = () => this.close();
 
     // Fetch guilds and logs
     let guildsHtml = '<div style="color:var(--text-tertiary)">Carregando...</div>';
@@ -67,7 +71,9 @@ const Bot = {
       if (gRes.ok) {
         const gData = await gRes.json();
         if (gData.online && gData.guilds.length) {
-          guildsHtml = gData.guilds.map(g => `
+          guildsHtml = gData.guilds
+            .map(
+              (g) => `
             <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg-base);border-radius:8px">
               ${g.icon ? `<img src="${g.icon}" style="width:24px;height:24px;border-radius:50%">` : `<div style="width:24px;height:24px;border-radius:50%;background:var(--border-subtle);display:flex;align-items:center;justify-content:center;font-size:10px">${g.name[0]}</div>`}
               <div style="flex:1;min-width:0">
@@ -75,7 +81,9 @@ const Bot = {
                 <div style="font-size:11px;color:var(--text-tertiary)">${g.members} membros · ID: ${g.id}</div>
               </div>
             </div>
-          `).join('');
+          `,
+            )
+            .join("");
         } else {
           guildsHtml = '<div style="color:var(--text-tertiary);font-size:13px">Nenhum servidor</div>';
         }
@@ -83,12 +91,16 @@ const Bot = {
       if (lRes.ok) {
         const lData = await lRes.json();
         if (lData.logs && lData.logs.length) {
-          logsHtml = lData.logs.slice(-50).reverse().map(line => {
-            const isError = line.includes('ERROR') || line.includes('CRITICAL');
-            const isWarn = line.includes('WARNING');
-            const color = isError ? 'var(--red)' : isWarn ? 'var(--yellow)' : 'var(--text-secondary)';
-            return `<div style="font-size:11px;color:${color};padding:1px 0;font-family:var(--font-mono);white-space:pre-wrap;word-break:break-all">${line.replace(/</g,'&lt;')}</div>`;
-          }).join('');
+          logsHtml = lData.logs
+            .slice(-50)
+            .reverse()
+            .map((line) => {
+              const isError = line.includes("ERROR") || line.includes("CRITICAL");
+              const isWarn = line.includes("WARNING");
+              const color = isError ? "var(--red)" : isWarn ? "var(--yellow)" : "var(--text-secondary)";
+              return `<div style="font-size:11px;color:${color};padding:1px 0;font-family:var(--font-mono);white-space:pre-wrap;word-break:break-all">${line.replace(/</g, "&lt;")}</div>`;
+            })
+            .join("");
         } else {
           logsHtml = '<div style="color:var(--text-tertiary);font-size:13px">Nenhum log disponivel</div>';
         }
@@ -102,11 +114,11 @@ const Bot = {
       ? `<span style="color:#4caf50;font-weight:600">● Online</span> <span style="color:var(--text-tertiary);font-size:12px">${this.data.latency}ms · ${this.formatUptime(this.data.uptime)}</span>`
       : '<span style="color:var(--red)">● Offline</span>';
 
-    document.getElementById('modal-body').innerHTML = `
+    document.getElementById("modal-body").innerHTML = `
       <div style="margin-bottom:16px;padding:12px 14px;background:var(--bg-base);border-radius:10px;display:flex;align-items:center;gap:12px">
         <div style="font-size:32px">🤖</div>
         <div>
-          <div style="font-size:15px;font-weight:600">${this.data?.online ? this.data.user : 'Satella Bot'}</div>
+          <div style="font-size:15px;font-weight:600">${this.data?.online ? this.data.user : "Satella Bot"}</div>
           <div style="font-size:12px;color:var(--text-tertiary)">${status}</div>
         </div>
       </div>
@@ -126,16 +138,18 @@ const Bot = {
       </div>
     `;
 
-    overlay.classList.remove('hidden');
-    overlay.onclick = (e) => { if (e.target === overlay) this.close(); };
+    overlay.classList.remove("hidden");
+    overlay.onclick = (e) => {
+      if (e.target === overlay) this.close();
+    };
   },
 
   close() {
-    document.getElementById('modal-overlay').classList.add('hidden');
+    document.getElementById("modal-overlay").classList.add("hidden");
   },
 
   render() {
-    const container = document.getElementById('bot-container');
+    const container = document.getElementById("bot-container");
     if (!container) return;
 
     if (!this.data || !this.data.online) {
@@ -143,7 +157,7 @@ const Bot = {
         <div class="bot-offline" onclick="Bot.open()" style="cursor:pointer">
           <div class="bot-icon">🤖</div>
           <div class="bot-status">Bot offline</div>
-          <div class="bot-detail">${this.data?.error || 'Não foi possível conectar'}</div>
+          <div class="bot-detail">${this.data?.error || "Não foi possível conectar"}</div>
           <button class="btn-secondary" style="margin-top:12px;padding:8px 16px;font-size:11px" onclick="event.stopPropagation();Bot.reconnect()">RECONECTAR</button>
         </div>
       `;
@@ -152,7 +166,7 @@ const Bot = {
 
     const uptime = this.formatUptime(this.data.uptime);
     const ping = this.data.latency || 0;
-    const pingColor = ping < 100 ? 'var(--green)' : ping < 300 ? 'var(--yellow)' : 'var(--red)';
+    const pingColor = ping < 100 ? "var(--green)" : ping < 300 ? "var(--yellow)" : "var(--red)";
 
     container.innerHTML = `
       <div class="bot-online" onclick="Bot.open()" style="cursor:pointer">
@@ -189,15 +203,15 @@ const Bot = {
   },
 
   formatUptime(seconds) {
-    if (!seconds || seconds <= 0) return 'agora mesmo';
+    if (!seconds || seconds <= 0) return "agora mesmo";
     const d = Math.floor(seconds / 86400);
     const h = Math.floor((seconds % 86400) / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const parts = [];
-    if (d > 0) parts.push(d + 'd');
-    if (h > 0) parts.push(h + 'h');
-    if (m > 0) parts.push(m + 'm');
-    return parts.join(' ') || '<1m';
+    if (d > 0) parts.push(d + "d");
+    if (h > 0) parts.push(h + "h");
+    if (m > 0) parts.push(m + "m");
+    return parts.join(" ") || "<1m";
   },
 
   reconnect() {

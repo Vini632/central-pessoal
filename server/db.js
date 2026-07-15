@@ -1,10 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const Database = require('better-sqlite3');
+const path = require("path");
+const Database = require("better-sqlite3");
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'central.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, "..", "central.db");
 const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
+db.pragma("journal_mode = WAL");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS notes (
@@ -22,7 +21,6 @@ db.exec(`
     title TEXT NOT NULL DEFAULT '',
     url TEXT NOT NULL DEFAULT ''
   );
-  DROP TABLE IF EXISTS events;
   CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL DEFAULT '',
@@ -77,20 +75,20 @@ function dbDeleteAll(table) {
 function dbInsert(table, row) {
   const keys = Object.keys(row);
   const vals = Object.values(row);
-  const placeholders = keys.map(() => '?').join(',');
-  db.prepare(`INSERT OR REPLACE INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`).run(...vals);
+  const placeholders = keys.map(() => "?").join(",");
+  db.prepare(`INSERT OR REPLACE INTO ${table} (${keys.join(",")}) VALUES (${placeholders})`).run(...vals);
 }
 
 const TABLES = {
-  central_notes: 'notes',
-  central_todo: 'todos',
-  central_links: 'links',
-  central_events: 'events',
-  central_habits: 'habits',
-  central_habit_logs: 'habit_logs',
-  central_leitura: 'leitura',
+  central_notes: "notes",
+  central_todo: "todos",
+  central_links: "links",
+  central_events: "events",
+  central_habits: "habits",
+  central_habit_logs: "habit_logs",
+  central_leitura: "leitura",
 };
 
-const SENSITIVE_KEYS = ['youtubeApiKey', 'driveToken'];
+const SENSITIVE_KEYS = ["youtubeApiKey", "driveToken"];
 
 module.exports = { db, dbAll, dbDeleteAll, dbInsert, TABLES, SENSITIVE_KEYS, DB_PATH };

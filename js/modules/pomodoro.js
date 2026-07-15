@@ -1,10 +1,11 @@
+// eslint-disable-next-line no-unused-vars
 const Pomodoro = {
   modes: {
-    focus: { label: 'Foco', duration: 25 },
-    short: { label: 'Pausa Curta', duration: 5 },
-    long: { label: 'Pausa Longa', duration: 15 },
+    focus: { label: "Foco", duration: 25 },
+    short: { label: "Pausa Curta", duration: 5 },
+    long: { label: "Pausa Longa", duration: 15 },
   },
-  mode: 'focus',
+  mode: "focus",
   timeLeft: 25 * 60,
   running: false,
   timer: null,
@@ -13,21 +14,27 @@ const Pomodoro = {
   init() {
     this.load();
     this.render();
-    document.getElementById('pomo-focus').addEventListener('click', () => this.setMode('focus'));
-    document.getElementById('pomo-short').addEventListener('click', () => this.setMode('short'));
-    document.getElementById('pomo-long').addEventListener('click', () => this.setMode('long'));
-    document.getElementById('pomo-toggle').addEventListener('click', () => this.toggle());
-    document.getElementById('pomo-reset').addEventListener('click', () => this.reset());
+    document.getElementById("pomo-focus").addEventListener("click", () => this.setMode("focus"));
+    document.getElementById("pomo-short").addEventListener("click", () => this.setMode("short"));
+    document.getElementById("pomo-long").addEventListener("click", () => this.setMode("long"));
+    document.getElementById("pomo-toggle").addEventListener("click", () => this.toggle());
+    document.getElementById("pomo-reset").addEventListener("click", () => this.reset());
   },
 
   load() {
     try {
-      this.sessions = parseInt(localStorage.getItem('central_pomo_sessions')) || 0;
-    } catch { this.sessions = 0; }
+      this.sessions = parseInt(localStorage.getItem("central_pomo_sessions")) || 0;
+    } catch {
+      this.sessions = 0;
+    }
   },
 
   save() {
-    try { Data.save('central_pomo_sessions', this.sessions); } catch (e) { console.warn("pomodoro: catch", e); }
+    try {
+      Data.save("central_pomo_sessions", this.sessions);
+    } catch (e) {
+      console.warn("pomodoro: catch", e);
+    }
   },
 
   setMode(mode) {
@@ -48,7 +55,7 @@ const Pomodoro = {
   start() {
     if (this.running) return;
     this.running = true;
-    document.getElementById('pomo-toggle').textContent = 'PAUSAR';
+    document.getElementById("pomo-toggle").textContent = "PAUSAR";
     this.timer = setInterval(() => {
       this.timeLeft--;
       if (this.timeLeft <= 0) {
@@ -62,14 +69,14 @@ const Pomodoro = {
   pause() {
     this.running = false;
     clearInterval(this.timer);
-    document.getElementById('pomo-toggle').textContent = 'CONTINUAR';
+    document.getElementById("pomo-toggle").textContent = "CONTINUAR";
   },
 
   reset() {
     this.running = false;
     clearInterval(this.timer);
     this.timeLeft = this.modes[this.mode].duration * 60;
-    document.getElementById('pomo-toggle').textContent = 'INICIAR';
+    document.getElementById("pomo-toggle").textContent = "INICIAR";
     this.render();
   },
 
@@ -77,24 +84,24 @@ const Pomodoro = {
     this.running = false;
     clearInterval(this.timer);
 
-    if (this.mode === 'focus') {
+    if (this.mode === "focus") {
       this.sessions++;
       this.save();
       // Auto-next to short break after 4 sessions, long break on 4th
-      const next = this.sessions % 4 === 0 ? 'long' : 'short';
+      const next = this.sessions % 4 === 0 ? "long" : "short";
       this.mode = next;
       this.timeLeft = this.modes[next].duration * 60;
     } else {
-      this.mode = 'focus';
+      this.mode = "focus";
       this.timeLeft = this.modes.focus.duration * 60;
     }
 
     this.beep();
     this.render();
 
-    if (Notification.permission === 'granted') {
-      new Notification('Pomodoro', {
-        body: this.mode === 'focus' ? 'Hora de focar!' : 'Pausa concluída!',
+    if (Notification.permission === "granted") {
+      new Notification("Pomodoro", {
+        body: this.mode === "focus" ? "Hora de focar!" : "Pausa concluída!",
       });
     }
   },
@@ -117,28 +124,30 @@ const Pomodoro = {
         osc2.start(ctx.currentTime);
         osc2.stop(ctx.currentTime + 0.3);
       }, 250);
-    } catch (e) { console.warn("pomodoro: catch", e); }
+    } catch (e) {
+      console.warn("pomodoro: catch", e);
+    }
   },
 
   updateDisplay() {
-    const m = String(Math.floor(this.timeLeft / 60)).padStart(2, '0');
-    const s = String(this.timeLeft % 60).padStart(2, '0');
-    document.getElementById('pomo-time').textContent = `${m}:${s}`;
+    const m = String(Math.floor(this.timeLeft / 60)).padStart(2, "0");
+    const s = String(this.timeLeft % 60).padStart(2, "0");
+    document.getElementById("pomo-time").textContent = `${m}:${s}`;
     document.title = `(${m}:${s}) Central Pessoal`;
   },
 
   render() {
     this.updateDisplay();
-    document.getElementById('pomo-sessions').textContent = `${this.sessions} sessões`;
-    const statEl = document.getElementById('stat-pomo');
+    document.getElementById("pomo-sessions").textContent = `${this.sessions} sessões`;
+    const statEl = document.getElementById("stat-pomo");
     if (statEl) statEl.textContent = this.sessions;
 
-    document.querySelectorAll('.pomo-mode-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`pomo-${this.mode}`)?.classList.add('active');
+    document.querySelectorAll(".pomo-mode-btn").forEach((b) => b.classList.remove("active"));
+    document.getElementById(`pomo-${this.mode}`)?.classList.add("active");
   },
 };
 
 // Request notification permission on load
-if ('Notification' in window && Notification.permission === 'default') {
+if ("Notification" in window && Notification.permission === "default") {
   Notification.requestPermission();
 }

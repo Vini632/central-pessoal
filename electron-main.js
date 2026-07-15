@@ -1,33 +1,36 @@
-const { app, BrowserWindow, Menu } = require('electron');
-const { spawn } = require('child_process');
-const http = require('http');
-const path = require('path');
+const { app, BrowserWindow, Menu } = require("electron");
+const { spawn } = require("child_process");
+const http = require("http");
+const path = require("path");
 
 let server = null;
 let win = null;
 let ready = false;
 
 function startServer() {
-  server = spawn(process.env.NODE || 'node', [path.join(__dirname, 'server.js')], {
-    stdio: ['ignore', 'pipe', 'pipe'],
+  server = spawn(process.env.NODE || "node", [path.join(__dirname, "server.js")], {
+    stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
 
-  server.stdout.on('data', (d) => console.log('[server]', d.toString().trim()));
-  server.stderr.on('data', (d) => console.error('[server]', d.toString().trim()));
-  server.on('error', (e) => console.error('[server] error:', e.message));
+  server.stdout.on("data", (d) => console.log("[server]", d.toString().trim()));
+  server.stderr.on("data", (d) => console.error("[server]", d.toString().trim()));
+  server.on("error", (e) => console.error("[server] error:", e.message));
 }
 
 function pollServer(callback) {
-  const req = http.get('http://localhost:3456/', (res) => {
+  const req = http.get("http://localhost:3456/", (_res) => {
     callback(true);
   });
-  req.on('error', () => callback(false));
-  req.setTimeout(2000, () => { req.destroy(); callback(false); });
+  req.on("error", () => callback(false));
+  req.setTimeout(2000, () => {
+    req.destroy();
+    callback(false);
+  });
 }
 
 function createLoadingHTML(progress) {
-  const dots = '.'.repeat(progress % 4);
+  const dots = ".".repeat(progress % 4);
   return `<!DOCTYPE html><html><head>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -49,17 +52,22 @@ setTimeout(()=>{document.getElementById('err').textContent='Servidor nao iniciou
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1280, height: 800, minWidth: 900, minHeight: 600,
-    title: 'Central Pessoal',
-    icon: path.join(__dirname, 'favicon.svg'),
+    width: 1280,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    title: "Central Pessoal",
+    icon: path.join(__dirname, "favicon.svg"),
     webPreferences: { nodeIntegration: false, contextIsolation: true },
-    autoHideMenuBar: true, backgroundColor: '#000000', show: false,
+    autoHideMenuBar: true,
+    backgroundColor: "#000000",
+    show: false,
   });
 
   let progress = 0;
   const loadingInterval = setInterval(() => {
     if (win && !ready) {
-      win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(createLoadingHTML(progress++)));
+      win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(createLoadingHTML(progress++)));
     }
   }, 2000);
 
@@ -68,41 +76,47 @@ function createWindow() {
       if (ok && !ready) {
         ready = true;
         clearInterval(loadingInterval);
-        win.loadURL('http://localhost:3456/');
+        win.loadURL("http://localhost:3456/");
       }
     });
   };
 
-  win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(createLoadingHTML(0)));
-  win.once('ready-to-show', () => win.show());
-  win.on('closed', () => { win = null; });
+  win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(createLoadingHTML(0)));
+  win.once("ready-to-show", () => win.show());
+  win.on("closed", () => {
+    win = null;
+  });
 
   setInterval(check, 1000);
 
   const template = [
     {
-      label: 'Central Pessoal',
-      submenu: [
-        { role: 'reload', label: 'Recarregar' },
-        { type: 'separator' },
-        { role: 'quit', label: 'Sair' },
-      ],
+      label: "Central Pessoal",
+      submenu: [{ role: "reload", label: "Recarregar" }, { type: "separator" }, { role: "quit", label: "Sair" }],
     },
     {
-      label: 'Exibir',
+      label: "Exibir",
       submenu: [
-        { role: 'togglefullscreen', label: 'Tela Cheia' },
-        { role: 'toggleDevTools', label: 'Ferramentas do Desenvolvedor' },
-        { type: 'separator' },
-        { role: 'zoomIn', label: 'Aumentar Zoom' },
-        { role: 'zoomOut', label: 'Diminuir Zoom' },
-        { role: 'resetZoom', label: 'Resetar Zoom' },
+        { role: "togglefullscreen", label: "Tela Cheia" },
+        { role: "toggleDevTools", label: "Ferramentas do Desenvolvedor" },
+        { type: "separator" },
+        { role: "zoomIn", label: "Aumentar Zoom" },
+        { role: "zoomOut", label: "Diminuir Zoom" },
+        { role: "resetZoom", label: "Resetar Zoom" },
       ],
     },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-app.whenReady().then(() => { createWindow(); startServer(); });
-app.on('window-all-closed', () => { if (server) server.kill(); if (process.platform !== 'darwin') app.quit(); });
-app.on('before-quit', () => { if (server) server.kill(); });
+app.whenReady().then(() => {
+  createWindow();
+  startServer();
+});
+app.on("window-all-closed", () => {
+  if (server) server.kill();
+  if (process.platform !== "darwin") app.quit();
+});
+app.on("before-quit", () => {
+  if (server) server.kill();
+});

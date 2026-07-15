@@ -52,24 +52,24 @@ projeto_sem_ideia/
 
 ## Módulos (JS Frontend — `js/modules/`)
 
-| Módulo | Arquivo | Descrição |
-|--------|---------|-----------|
+| Módulo   | Arquivo       | Descrição                         |
+| -------- | ------------- | --------------------------------- |
 | Settings | `settings.js` | Tema, backup Drive, chaves de API |
-| Clock | `clock.js` | Relógio, previsão do tempo |
-| News | `news.js` | Leitor de RSS |
-| Notes | `notes.js` | Notas com markdown + imagens |
-| Todo | `todo.js` | Lista de tarefas |
-| Calendar | `calendar.js` | Calendário com eventos |
-| Pomodoro | `pomodoro.js` | Timer foco/pausa |
-| Links | `links.js` | Gerenciador de bookmarks |
-| Habits | `habits.js` | Rastreador de hábitos |
-| Terminal | `terminal.js` | Emulador via WebSocket |
-| Player | `player.js` | YouTube + sons ambientes |
-| AI | `ai.js` | Chat com IA (Ollama/OpenAI) |
-| Game | `game.js` | Jogo Ferreiro (idle/incremental) |
-| Leitura | `leitura.js` | Lista de leitura |
-| Escrita | `escrita.js` | Editor literário com IA |
-| Bot | `bot.js` | Dashboard do bot Discord |
+| Clock    | `clock.js`    | Relógio, previsão do tempo        |
+| News     | `news.js`     | Leitor de RSS                     |
+| Notes    | `notes.js`    | Notas com markdown + imagens      |
+| Todo     | `todo.js`     | Lista de tarefas                  |
+| Calendar | `calendar.js` | Calendário com eventos            |
+| Pomodoro | `pomodoro.js` | Timer foco/pausa                  |
+| Links    | `links.js`    | Gerenciador de bookmarks          |
+| Habits   | `habits.js`   | Rastreador de hábitos             |
+| Terminal | `terminal.js` | Emulador via WebSocket            |
+| Player   | `player.js`   | YouTube + sons ambientes          |
+| AI       | `ai.js`       | Chat com IA (Ollama/OpenAI)       |
+| Game     | `game.js`     | Jogo Ferreiro (idle/incremental)  |
+| Leitura  | `leitura.js`  | Lista de leitura                  |
+| Escrita  | `escrita.js`  | Editor literário com IA           |
+| Bot      | `bot.js`      | Dashboard do bot Discord          |
 
 Todos os módulos são registrados em `window.Central` (ex: `Central.Settings`, `Central.AI`).
 
@@ -77,34 +77,34 @@ Todos os módulos são registrados em `window.Central` (ex: `Central.Settings`, 
 
 Todas as rotas `/api/*` requerem `Authorization: Bearer <token>` se `API_TOKEN` estiver configurado.
 
-| Rota | Métodos | Descrição |
-|------|---------|-----------|
-| `/api/data` | GET, POST | Backup completo dos dados (SQLite) |
-| `/api/habits` | GET, POST | Hábitos e logs |
-| `/api/ollama/status` | GET | Status do Ollama |
-| `/api/ollama/models` | GET | Listar modelos |
-| `/api/ollama/generate` | POST | Gerar texto |
-| `/api/ollama/pull` | POST | Baixar modelo |
-| `/api/ollama/start` | POST | Iniciar Ollama |
-| `/api/ollama/set-url` | POST | URL customizada |
-| `/api/settings/youtubeApiKey` | GET, POST | Chave do YouTube |
-| `/api/settings/driveToken` | GET, POST | Token do Google Drive |
-| `/api/ai/instructions` | GET | Instruções do sistema |
-| `/api/search` | POST | DuckDuckGo |
-| `/api/metadata` | POST | OG metadata |
-| `/api/fetch` | POST | Fetch + strip HTML |
-| `/api/youtube/search` | GET | Buscar vídeos |
-| `/api/youtube/playlist` | GET | Itens de playlist |
-| `/api/youtube/validate` | GET | Validar key |
-| `/api/escrita` | GET, POST | Árvore + ler/escrever |
-| `/api/escrita/create` | POST | Criar arquivo |
-| `/api/escrita/rename` | POST | Renomear |
-| `/api/escrita/delete` | POST | Deletar |
-| `/api/escrita/ai` | POST | Assistente de escrita |
-| `/api/weather` | GET | Previsão do tempo |
-| `/api/stats` | GET | Estatísticas agregadas |
-| `/api/bot/*` | GET, POST | Proxy Discord |
-| `/api/pentest` | POST | Pentest de URL |
+| Rota                          | Métodos   | Descrição                          |
+| ----------------------------- | --------- | ---------------------------------- |
+| `/api/data`                   | GET, POST | Backup completo dos dados (SQLite) |
+| `/api/habits`                 | GET, POST | Hábitos e logs                     |
+| `/api/ollama/status`          | GET       | Status do Ollama                   |
+| `/api/ollama/models`          | GET       | Listar modelos                     |
+| `/api/ollama/generate`        | POST      | Gerar texto                        |
+| `/api/ollama/pull`            | POST      | Baixar modelo                      |
+| `/api/ollama/start`           | POST      | Iniciar Ollama                     |
+| `/api/ollama/set-url`         | POST      | URL customizada                    |
+| `/api/settings/youtubeApiKey` | GET, POST | Chave do YouTube                   |
+| `/api/settings/driveToken`    | GET, POST | Token do Google Drive              |
+| `/api/ai/instructions`        | GET       | Instruções do sistema              |
+| `/api/search`                 | POST      | DuckDuckGo                         |
+| `/api/metadata`               | POST      | OG metadata                        |
+| `/api/fetch`                  | POST      | Fetch + strip HTML                 |
+| `/api/youtube/search`         | GET       | Buscar vídeos                      |
+| `/api/youtube/playlist`       | GET       | Itens de playlist                  |
+| `/api/youtube/validate`       | GET       | Validar key                        |
+| `/api/escrita`                | GET, POST | Árvore + ler/escrever              |
+| `/api/escrita/create`         | POST      | Criar arquivo                      |
+| `/api/escrita/rename`         | POST      | Renomear                           |
+| `/api/escrita/delete`         | POST      | Deletar                            |
+| `/api/escrita/ai`             | POST      | Assistente de escrita              |
+| `/api/weather`                | GET       | Previsão do tempo                  |
+| `/api/stats`                  | GET       | Estatísticas agregadas             |
+| `/api/bot/*`                  | GET, POST | Proxy Discord                      |
+| `/api/pentest`                | POST      | Pentest de URL                     |
 
 ## Como Rodar
 

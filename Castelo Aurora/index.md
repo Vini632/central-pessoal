@@ -32,13 +32,13 @@ Cinco estudantes são escolhidos como Representantes da escola. Entre eles, um j
 
 ## Personagens
 
-| Papel | Nome | Idade | Função |
-|-------|------|-------|--------|
-| Protagonista | Yūto Aoyama (悠翔) | 16 | Relações humanas, liderança |
-| Heroína | Aoi Tachibana (葵) | 16 | Organização, planejamento |
-| 3º Representante | Ren Kurogane (蓮) | 17 | Esportes, motivação |
-| 4º Representante | Itsuki Minase (樹) | 16 | Conhecimento, pesquisa |
-| 5ª Representante | Nagi Fujimoto (凪) | 17 | Cultura, artes |
+| Papel            | Nome               | Idade | Função                      |
+| ---------------- | ------------------ | ----- | --------------------------- |
+| Protagonista     | Yūto Aoyama (悠翔) | 16    | Relações humanas, liderança |
+| Heroína          | Aoi Tachibana (葵) | 16    | Organização, planejamento   |
+| 3º Representante | Ren Kurogane (蓮)  | 17    | Esportes, motivação         |
+| 4º Representante | Itsuki Minase (樹) | 16    | Conhecimento, pesquisa      |
+| 5ª Representante | Nagi Fujimoto (凪) | 17    | Cultura, artes              |
 
 - [ ] Esboço da trama / arco do primeiro ano
 - [ ] Capítulo 1

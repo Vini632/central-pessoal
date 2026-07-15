@@ -1,13 +1,13 @@
-﻿const { describe, it, before, after } = require('node:test');
-const assert = require('node:assert');
-const http = require('http');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
+﻿const { describe, it, before, after } = require("node:test");
+const assert = require("node:assert");
+const http = require("http");
+const path = require("path");
+const fs = require("fs");
+const os = require("os");
 
 const TEST_DB = path.join(os.tmpdir(), `central-test-${Date.now()}.db`);
-const PORT = parseInt(process.env.TEST_PORT || '3459', 10);
-const BASE = 'http://localhost:' + PORT;
+const PORT = parseInt(process.env.TEST_PORT || "3459", 10);
+const BASE = "http://localhost:" + PORT;
 
 function fetch(path, opts = {}) {
   return new Promise((resolve, reject) => {
@@ -16,126 +16,131 @@ function fetch(path, opts = {}) {
       hostname: urlObj.hostname,
       port: urlObj.port,
       path: urlObj.pathname + urlObj.search,
-      method: opts.method || 'GET',
+      method: opts.method || "GET",
       headers: opts.headers || {},
       timeout: 5000,
     };
     const req = http.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => data += chunk);
-      res.on('end', () => resolve({ status: res.statusCode, data }));
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => resolve({ status: res.statusCode, data }));
     });
-    req.on('error', reject);
-    req.setTimeout(5000, () => { req.destroy(); reject(new Error('Timeout')); });
+    req.on("error", reject);
+    req.setTimeout(5000, () => {
+      req.destroy();
+      reject(new Error("Timeout"));
+    });
     if (opts.body) req.write(opts.body);
     req.end();
   });
 }
 
-describe('Central Pessoal Server', () => {
+describe("Central Pessoal Server", () => {
   let server;
 
   before(() => {
-    delete require.cache[require.resolve('../server.js')];
+    delete require.cache[require.resolve("../server.js")];
     process.env.PORT = String(PORT);
     process.env.DB_PATH = TEST_DB;
-    process.env.API_TOKEN = '';
-    process.env.DISABLE_OLLAMA = '1';
-    server = require('../server.js');
+    process.env.API_TOKEN = "";
+    process.env.DISABLE_OLLAMA = "1";
+    server = require("../server.js");
   });
 
   after(() => {
     if (server) server.close();
-    try { fs.unlinkSync(TEST_DB); } catch {}
+    try {
+      fs.unlinkSync(TEST_DB);
+    } catch {}
   });
 
-  it('should serve index.html', async () => {
-    const res = await fetch('/');
+  it("should serve index.html", async () => {
+    const res = await fetch("/");
     assert.strictEqual(res.status, 200);
-    assert.ok(res.data.includes('Central Pessoal'));
+    assert.ok(res.data.includes("Central Pessoal"));
   });
 
-  it('should serve CSS base', async () => {
-    const res = await fetch('/css/base.css');
+  it("should serve CSS base", async () => {
+    const res = await fetch("/css/base.css");
     assert.strictEqual(res.status, 200);
-    assert.ok(res.data.includes(':root'));
+    assert.ok(res.data.includes(":root"));
   });
 
-  it('should return 404 for unknown files', async () => {
-    const res = await fetch('/nonexistent.xyz');
+  it("should return 404 for unknown files", async () => {
+    const res = await fetch("/nonexistent.xyz");
     assert.strictEqual(res.status, 404);
   });
 
-  it('should return API data structure', async () => {
-    const res = await fetch('/api/data');
+  it("should return API data structure", async () => {
+    const res = await fetch("/api/data");
     assert.strictEqual(res.status, 200);
     const json = JSON.parse(res.data);
     assert.ok(Array.isArray(json.central_notes));
     assert.ok(Array.isArray(json.central_todo));
-    assert.strictEqual(typeof json.central_settings, 'object');
+    assert.strictEqual(typeof json.central_settings, "object");
     assert.strictEqual(json.central_settings.youtubeApiKey, undefined);
     assert.strictEqual(json.central_settings.driveToken, undefined);
   });
 
-  it('should save and load notes', async () => {
-    const testNote = [{ id: 'test-note-1', content: 'teste persistencia', date: '2024-01-01' }];
-    const saveRes = await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  it("should save and load notes", async () => {
+    const testNote = [{ id: "test-note-1", content: "teste persistencia", date: "2024-01-01" }];
+    const saveRes = await fetch("/api/data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ central_notes: testNote }),
     });
     assert.strictEqual(saveRes.status, 200);
 
-    const loadRes = await fetch('/api/data');
+    const loadRes = await fetch("/api/data");
     const json = JSON.parse(loadRes.data);
-    const found = json.central_notes.find(n => n.id === 'test-note-1');
+    const found = json.central_notes.find((n) => n.id === "test-note-1");
     assert.ok(found);
-    assert.strictEqual(found.content, 'teste persistencia');
+    assert.strictEqual(found.content, "teste persistencia");
   });
 
-  it('should reject YouTube search when no key configured', async () => {
-    const res = await fetch('/api/youtube/search?q=test');
+  it("should reject YouTube search when no key configured", async () => {
+    const res = await fetch("/api/youtube/search?q=test");
     assert.strictEqual(res.status, 400);
     const json = JSON.parse(res.data);
-    assert.strictEqual(json.error.includes('API Key'), true);
+    assert.strictEqual(json.error.includes("API Key"), true);
   });
 
-  it('should save and retrieve sensitive settings via dedicated endpoints', async () => {
-    const saveRes = await fetch('/api/settings/youtubeApiKey', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: 'test-key-123' }),
+  it("should save and retrieve sensitive settings via dedicated endpoints", async () => {
+    const saveRes = await fetch("/api/settings/youtubeApiKey", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "test-key-123" }),
     });
     assert.strictEqual(saveRes.status, 200);
 
-    const getRes = await fetch('/api/settings/youtubeApiKey');
+    const getRes = await fetch("/api/settings/youtubeApiKey");
     assert.strictEqual(getRes.status, 200);
     const json = JSON.parse(getRes.data);
-    assert.strictEqual(json.value, 'test-key-123');
+    assert.strictEqual(json.value, "test-key-123");
   });
 
-  it('should reject unknown settings keys', async () => {
-    const res = await fetch('/api/settings/someRandomKey');
+  it("should reject unknown settings keys", async () => {
+    const res = await fetch("/api/settings/someRandomKey");
     assert.strictEqual(res.status, 404);
     const json = JSON.parse(res.data);
-    assert.strictEqual(json.error, 'Unknown key');
+    assert.strictEqual(json.error, "Unknown key");
   });
 
-  it('should return 403 for path traversal in API calls', async () => {
-    const res = await fetch('/api/escrita?path=../../server.js');
+  it("should return 403 for path traversal in API calls", async () => {
+    const res = await fetch("/api/escrita?path=../../server.js");
     assert.strictEqual(res.status, 403);
   });
 
-  it('should return 405 for unsupported methods on /api/escrita', async () => {
-    const res = await fetch('/api/escrita', { method: 'DELETE' });
+  it("should return 405 for unsupported methods on /api/escrita", async () => {
+    const res = await fetch("/api/escrita", { method: "DELETE" });
     assert.strictEqual(res.status, 405);
   });
 
-  it('should return 400 for POST to /api/escrita without path', async () => {
-    const res = await fetch('/api/escrita', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: 'abc' }),
+  it("should return 400 for POST to /api/escrita without path", async () => {
+    const res = await fetch("/api/escrita", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "abc" }),
     });
     assert.strictEqual(res.status, 400);
   });
