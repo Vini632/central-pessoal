@@ -3,9 +3,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const { loadModule } = require('./helpers/load');
 
-// ── Helpers ──
 function setupGame(type = 'ferreiro', overrides = {}) {
-  // Provide a mock DOM element for mod-game so render() doesn't crash
   const mockEl = {
     innerHTML: '',
     querySelector: () => null,
@@ -15,8 +13,6 @@ function setupGame(type = 'ferreiro', overrides = {}) {
     classList: { add: () => {}, remove: () => {} },
     dataset: {},
   };
-
-  // Load module with mock element
   const Game = loadModule('js/modules/game.js', {
     document: {
       getElementById: (id) => id === 'mod-game' || id === 'modal-overlay' ? mockEl : null,
@@ -41,21 +37,23 @@ function setupGame(type = 'ferreiro', overrides = {}) {
       createTextNode: () => ({}),
     },
   });
-
   Game.startNew(type);
   Object.assign(Game.state, overrides);
   return Game;
 }
 
 describe('Game Module', () => {
-
-  // ── formatting helpers ──
   describe('formatMoney', () => {
     it('formats positive numbers', () => {
       const g = setupGame();
       assert.strictEqual(g.formatMoney(0), '$0');
       assert.strictEqual(g.formatMoney(50), '$50');
       assert.strictEqual(g.formatMoney(999), '$999');
+    });
+
+    it('formats negative numbers', () => {
+      const g = setupGame();
+      assert.strictEqual(g.formatMoney(-5), '$-5');
     });
   });
 
@@ -71,23 +69,23 @@ describe('Game Module', () => {
     });
   });
 
-  // ── level / XP ──
   describe('addXp', () => {
     it('levels up when XP threshold is reached', () => {
       const g = setupGame();
       assert.strictEqual(g.state.level, 1);
       assert.strictEqual(g.state.xp, 0);
       g.addXp(15);
-      assert.strictEqual(g.state.level, 1, 'should not level with 15 xp');
-      g.addXp(10); // total 25, level 1 needs 20 → level 2 with 5 xp
+      assert.strictEqual(g.state.level, 1);
+      assert.strictEqual(g.state.xp, 15);
+      g.addXp(10);
       assert.strictEqual(g.state.level, 2);
       assert.strictEqual(g.state.xp, 5);
       assert.strictEqual(g.state.maxEnergy, 12);
     });
 
-    it('only levels up once per call (no loop)', () => {
+    it('only levels up once per call', () => {
       const g = setupGame();
-      g.addXp(100); // level 1 → needs 20 → 100 >= 20 → level 2, xp = 80
+      g.addXp(100);
       assert.strictEqual(g.state.level, 2);
       assert.strictEqual(g.state.xp, 80);
     });
@@ -115,7 +113,6 @@ describe('Game Module', () => {
     });
   });
 
-  // ── price calculation ──
   describe('getPrice', () => {
     it('returns base price at default state', () => {
       const g = setupGame();
@@ -145,7 +142,6 @@ describe('Game Module', () => {
     });
   });
 
-  // ── customer count ──
   describe('getCustomerCount', () => {
     it('returns 3 base at noon with 0 reputation', () => {
       const g = setupGame();
@@ -165,9 +161,16 @@ describe('Game Module', () => {
       g.state.hour = 4;
       assert.ok(g.getCustomerCount() <= 3);
     });
+
+    it('returns at least 0 (never negative)', () => {
+      const g = setupGame();
+      g.state.reputation = -100;
+      g.state.hour = 23;
+      const count = g.getCustomerCount();
+      assert.ok(count >= 0, `count should be >= 0, got ${count}`);
+    });
   });
 
-  // ── data integrity ──
   describe('Data integrity', () => {
     it('all recipe materials reference valid materials', () => {
       const g = setupGame();
@@ -207,7 +210,6 @@ describe('Game Module', () => {
     });
   });
 
-  // ── end of day ──
   describe('checkEndOfDay', () => {
     it('resets hour to 0 and increments day at midnight', () => {
       const g = setupGame();
@@ -219,9 +221,17 @@ describe('Game Module', () => {
       assert.strictEqual(g.state.hour, 0);
       assert.strictEqual(g.state.day, 2);
     });
+
+    it('does not change day when hour < 24', () => {
+      const g = setupGame();
+      g.state.hour = 15;
+      g.state.day = 1;
+      g.checkEndOfDay();
+      assert.strictEqual(g.state.hour, 15);
+      assert.strictEqual(g.state.day, 1);
+    });
   });
 
-  // ── doAction ──
   describe('doAction', () => {
     it('advance increments hour by 1', async () => {
       const g = setupGame();
@@ -239,16 +249,15 @@ describe('Game Module', () => {
     });
   });
 
-  // ── random events ──
   describe('randomEvent', () => {
     it('does not crash and updates state', () => {
       const g = setupGame();
       const beforeMoney = g.state.money;
       g.randomEvent();
-      // Money might have changed (or not, depending on random event)
-      assert.ok(typeof g.state.money === 'number');
-      assert.ok(g.state.log.length > 1); // initial log + event
+      assert.strictEqual(typeof g.state.money, 'number');
+      assert.ok(g.state.log.length > 1);
     });
   });
+
 
 });

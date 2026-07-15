@@ -5,8 +5,6 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// Use a temp file for the test database to avoid concurrency issues
-// with better-sqlite3's WAL mode when multiple test files run in parallel
 const TEST_DB = path.join(os.tmpdir(), `central-test-${Date.now()}.db`);
 const PORT = parseInt(process.env.TEST_PORT || '3459', 10);
 const BASE = 'http://localhost:' + PORT;
@@ -38,7 +36,6 @@ describe('Central Pessoal Server', () => {
   let server;
 
   before(() => {
-    // Clear the module cache so we get a fresh server (not the already-running one)
     delete require.cache[require.resolve('../server.js')];
     process.env.PORT = String(PORT);
     process.env.DB_PATH = TEST_DB;
@@ -49,7 +46,6 @@ describe('Central Pessoal Server', () => {
 
   after(() => {
     if (server) server.close();
-    // Clean up temp DB
     try { fs.unlinkSync(TEST_DB); } catch {}
   });
 
@@ -76,9 +72,9 @@ describe('Central Pessoal Server', () => {
     const json = JSON.parse(res.data);
     assert.ok(Array.isArray(json.central_notes));
     assert.ok(Array.isArray(json.central_todo));
-    assert.ok(typeof json.central_settings === 'object');
-    assert.strictEqual(json.central_settings.youtubeApiKey, undefined, 'youtubeApiKey must not leak to frontend');
-    assert.strictEqual(json.central_settings.driveToken, undefined, 'driveToken must not leak to frontend');
+    assert.strictEqual(typeof json.central_settings, 'object');
+    assert.strictEqual(json.central_settings.youtubeApiKey, undefined);
+    assert.strictEqual(json.central_settings.driveToken, undefined);
   });
 
   it('should save and load notes', async () => {
@@ -101,8 +97,7 @@ describe('Central Pessoal Server', () => {
     const res = await fetch('/api/youtube/search?q=test');
     assert.strictEqual(res.status, 400);
     const json = JSON.parse(res.data);
-    assert.ok(json.error);
-    assert.ok(json.error.includes('API Key'));
+    assert.strictEqual(json.error.includes('API Key'), true);
   });
 
   it('should save and retrieve sensitive settings via dedicated endpoints', async () => {
@@ -122,5 +117,26 @@ describe('Central Pessoal Server', () => {
   it('should reject unknown settings keys', async () => {
     const res = await fetch('/api/settings/someRandomKey');
     assert.strictEqual(res.status, 404);
+    const json = JSON.parse(res.data);
+    assert.strictEqual(json.error, 'Unknown key');
+  });
+
+  it('should return 403 for path traversal in API calls', async () => {
+    const res = await fetch('/api/escrita?path=../../server.js');
+    assert.strictEqual(res.status, 403);
+  });
+
+  it('should return 405 for unsupported methods on /api/escrita', async () => {
+    const res = await fetch('/api/escrita', { method: 'DELETE' });
+    assert.strictEqual(res.status, 405);
+  });
+
+  it('should return 400 for POST to /api/escrita without path', async () => {
+    const res = await fetch('/api/escrita', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'abc' }),
+    });
+    assert.strictEqual(res.status, 400);
   });
 });

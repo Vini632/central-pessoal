@@ -49,7 +49,7 @@ describe('Escrita AI API', () => {
     try { fs.unlinkSync(TEST_DB); } catch {}
   });
 
-  it('deve rejeitar requisição sem prompt', async () => {
+  it('rejeita requisição sem prompt com 400 e mensagem específica', async () => {
     const res = await fetch('/api/escrita/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,20 +57,23 @@ describe('Escrita AI API', () => {
     });
     assert.strictEqual(res.status, 400);
     const json = JSON.parse(res.data);
-    assert.ok(json.error);
+    assert.strictEqual(typeof json.error, 'string');
+    assert.strictEqual(json.error, 'prompt obrigatório');
   });
 
-  it('deve rejeitar método GET', async () => {
+  it('rejeita método GET com 405', async () => {
     const res = await fetch('/api/escrita/ai');
     assert.strictEqual(res.status, 405);
+    const json = JSON.parse(res.data);
+    assert.strictEqual(json.error, 'Método não permitido');
   });
 
-  it('deve rejeitar método PUT', async () => {
+  it('rejeita método PUT com 405', async () => {
     const res = await fetch('/api/escrita/ai', { method: 'PUT' });
     assert.strictEqual(res.status, 405);
   });
 
-  it('deve retornar 502 quando Ollama está desabilitado', async () => {
+  it('retorna 502 quando Ollama está desabilitado', async () => {
     const res = await fetch('/api/escrita/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -78,10 +81,10 @@ describe('Escrita AI API', () => {
     });
     assert.strictEqual(res.status, 502);
     const json = JSON.parse(res.data);
-    assert.ok(json.error);
+    assert.strictEqual(json.error, 'Ollama desabilitado');
   });
 
-  it('deve retornar 502 com Ollama desabilitado mesmo sem currentText', async () => {
+  it('retorna 502 sem currentText', async () => {
     const res = await fetch('/api/escrita/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -90,8 +93,7 @@ describe('Escrita AI API', () => {
     assert.strictEqual(res.status, 502);
   });
 
-  it('deve carregar contexto dos arquivos do livro mesmo com Ollama desabilitado', async () => {
-    // Verificar que o endpoint não falha antes de chegar no Ollama (ex: erro de arquivo)
+  it('carrega contexto dos arquivos do livro mesmo com Ollama desabilitado', async () => {
     const res = await fetch('/api/escrita/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -99,7 +101,24 @@ describe('Escrita AI API', () => {
     });
     assert.strictEqual(res.status, 502);
     const json = JSON.parse(res.data);
-    // Como DISABLE_OLLAMA está setado, deve retornar erro do Ollama, não de arquivos
-    assert.ok(json.error);
+    assert.strictEqual(json.error, 'Ollama desabilitado');
+  });
+
+  it('rejeita POST com body inválido com 400', async () => {
+    const res = await fetch('/api/escrita/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not-json',
+    });
+    assert.strictEqual(res.status, 400);
+  });
+
+  it('retorna 502 com currentText não string (Ollama desabilitado vem antes da validação)', async () => {
+    const res = await fetch('/api/escrita/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'teste', currentText: 123 }),
+    });
+    assert.strictEqual(res.status, 502);
   });
 });

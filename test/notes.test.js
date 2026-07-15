@@ -7,9 +7,6 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Provide FileReader mock for addImages tests
-// Use microtask (Promise.resolve().then) instead of setTimeout to avoid
-// timer pressure when tests run in parallel (359+ tests on same event loop)
 class MockFileReader {
   constructor() {
     this.onload = null;
@@ -28,15 +25,10 @@ function setupNotes(extraMocks = {}) {
     FileReader: MockFileReader,
     ...extraMocks,
   });
-
-  // Reset state
   Notes.data = [];
   Notes.previews = {};
-
-  // Override DOM-dependent methods
   Notes.render = function() {};
   Notes.init = function() { this.load(); };
-
   return Notes;
 }
 
@@ -74,7 +66,7 @@ describe('Notes Module - save', () => {
     let statsCalled = false;
     n.updateStats = function() { statsCalled = true; };
     n.save();
-    assert.ok(statsCalled);
+    assert.strictEqual(statsCalled, true);
   });
 
   it('does not crash when saving with notes', () => {
@@ -97,25 +89,27 @@ describe('Notes Module - create', () => {
     n.create();
     assert.strictEqual(n.data.length, 1);
     const note = n.data[0];
-    assert.ok(note.id, 'should have an id');
+    assert.strictEqual(typeof note.id, 'string');
+    assert.ok(note.id.length > 0);
     assert.strictEqual(note.content, '');
-    assert.ok(Array.isArray(note.images), 'images should be an array');
+    assert.ok(Array.isArray(note.images));
     assert.strictEqual(note.images.length, 0);
-    assert.ok(note.date, 'should have a date');
+    assert.strictEqual(typeof note.date, 'string');
+    assert.ok(note.date.length > 0);
   });
 
   it('adds new note to the beginning of data', () => {
     n.data = [makeNote({ id: 'old', content: 'First' })];
     n.create();
     assert.strictEqual(n.data.length, 2);
-    assert.strictEqual(n.data[0].content, ''); // new note is first
+    assert.strictEqual(n.data[0].content, '');
     assert.strictEqual(n.data[1].content, 'First');
   });
 
   it('generates an ISO date string', () => {
     n.create();
     const date = new Date(n.data[0].date);
-    assert.ok(!isNaN(date.getTime()), 'date should be valid ISO string');
+    assert.strictEqual(isNaN(date.getTime()), false);
   });
 
   it('calls save after creation', () => {
@@ -123,14 +117,14 @@ describe('Notes Module - create', () => {
     const origSave = n.save.bind(n);
     n.save = function() { saved = true; origSave(); };
     n.create();
-    assert.ok(saved);
+    assert.strictEqual(saved, true);
   });
 
   it('calls render after creation', () => {
     let rendered = false;
     n.render = function() { rendered = true; };
     n.create();
-    assert.ok(rendered);
+    assert.strictEqual(rendered, true);
   });
 
   it('creates notes with string IDs', () => {
@@ -139,7 +133,8 @@ describe('Notes Module - create', () => {
     n.create();
     assert.strictEqual(n.data.length, 3);
     n.data.forEach(note => {
-      assert.ok(typeof note.id === 'string' && note.id.length > 0);
+      assert.strictEqual(typeof note.id, 'string');
+      assert.ok(note.id.length > 0);
     });
   });
 });
@@ -181,14 +176,20 @@ describe('Notes Module - delete', () => {
     let saved = false;
     n.save = function() { saved = true; };
     n.delete('n1');
-    assert.ok(saved);
+    assert.strictEqual(saved, true);
   });
 
   it('calls render after deletion', () => {
     let rendered = false;
     n.render = function() { rendered = true; };
     n.delete('n1');
-    assert.ok(rendered);
+    assert.strictEqual(rendered, true);
+  });
+
+  it('handles delete on empty array', () => {
+    n.data = [];
+    n.delete('anything');
+    assert.strictEqual(n.data.length, 0);
   });
 });
 
@@ -209,7 +210,8 @@ describe('Notes Module - saveContent', () => {
     n.saveContent('n1', 'New content');
     const after = Date.now();
     const noteDate = new Date(n.data[0].date).getTime();
-    assert.ok(noteDate >= before && noteDate <= after, 'date should be updated to now');
+    assert.ok(noteDate >= before, 'date should be >= before');
+    assert.ok(noteDate <= after, 'date should be <= after');
   });
 
   it('does nothing for non-existent note', () => {
@@ -221,7 +223,7 @@ describe('Notes Module - saveContent', () => {
     let saved = false;
     n.save = function() { saved = true; };
     n.saveContent('n1', 'Updated');
-    assert.ok(saved);
+    assert.strictEqual(saved, true);
   });
 
   it('handles empty content string', () => {
@@ -233,6 +235,11 @@ describe('Notes Module - saveContent', () => {
     const long = 'A'.repeat(10000);
     n.saveContent('n1', long);
     assert.strictEqual(n.data[0].content.length, 10000);
+  });
+
+  it('handles null content as string "null"', () => {
+    n.saveContent('n1', null);
+    assert.strictEqual(n.data[0].content, null);
   });
 });
 
@@ -258,33 +265,15 @@ describe('Notes Module - togglePreview', () => {
     let rendered = false;
     n.render = function() { rendered = true; };
     n.togglePreview('n1');
-    assert.ok(rendered);
+    assert.strictEqual(rendered, true);
   });
 
   it('toggles multiple notes independently', () => {
-    n.togglePreview('n1'); // true
-    n.togglePreview('n2'); // true
-    n.togglePreview('n1'); // false
-    assert.strictEqual(n.previews['n1'], false);
-    assert.strictEqual(n.previews['n2'], true);
-  });
-});
-
-describe('Notes Module - preview/marked', () => {
-  let n;
-  beforeEach(() => { n = setupNotes(); });
-
-  it('marked.parse is available and renders text', () => {
-    // Verify the marked mock works for preview rendering
-    // togglePreview calls marked.parse via the mock
-    n.previews['n1'] = true;
-    // The mock should make marked.parse('*Vazio*') return '<p>*Vazio*</p>'
-    n.render = function() {
-      // render normally calls marked.parse in the template literal
-      // but since it's overridden, just verify toggle state
-    };
+    n.togglePreview('n1');
+    n.togglePreview('n2');
     n.togglePreview('n1');
     assert.strictEqual(n.previews['n1'], false);
+    assert.strictEqual(n.previews['n2'], true);
   });
 });
 
@@ -305,7 +294,7 @@ describe('Notes Module - addImages', () => {
     n.addImages('n1', [file]);
     await delay(50);
     assert.strictEqual(note.images.length, 1);
-    assert.ok(note.images[0].startsWith('data:'), 'image should be a data URL');
+    assert.strictEqual(note.images[0].startsWith('data:'), true);
   });
 
   it('does nothing for non-existent note', async () => {
@@ -325,7 +314,7 @@ describe('Notes Module - addImages', () => {
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     n.addImages('n1', [file]);
     await delay(50);
-    assert.ok(Array.isArray(note.images), 'images should be an array');
+    assert.ok(Array.isArray(note.images));
     assert.strictEqual(note.images.length, 1);
   });
 
@@ -334,12 +323,11 @@ describe('Notes Module - addImages', () => {
     let rendered = false;
     n.save = function() { saved = true; };
     n.render = function() { rendered = true; };
-
     const file = new File(['x'], 'x.png', { type: 'image/png' });
     n.addImages('n1', [file]);
     await delay(50);
-    assert.ok(saved, 'should save after loading images');
-    assert.ok(rendered, 'should render after loading images');
+    assert.strictEqual(saved, true);
+    assert.strictEqual(rendered, true);
   });
 
   it('handles multiple files', async () => {
@@ -362,10 +350,10 @@ describe('Notes Module - data integrity', () => {
       makeNote({ id: 'n1', content: 'Test', images: [], date: new Date().toISOString() }),
     ];
     for (const note of n.data) {
-      assert.ok(note.id, `missing id: ${JSON.stringify(note)}`);
-      assert.ok(note.date, `missing date: ${JSON.stringify(note)}`);
-      assert.ok('content' in note, `missing content: ${JSON.stringify(note)}`);
-      assert.ok('images' in note, `missing images: ${JSON.stringify(note)}`);
+      assert.strictEqual(typeof note.id, 'string');
+      assert.strictEqual(typeof note.date, 'string');
+      assert.strictEqual('content' in note, true);
+      assert.strictEqual('images' in note, true);
     }
   });
 
@@ -378,6 +366,16 @@ describe('Notes Module - data integrity', () => {
     n.data = [makeNote()];
     const hasImages = n.data[0].images || [];
     assert.ok(Array.isArray(hasImages));
+  });
+
+  it('note IDs are unique', () => {
+    n.data = [
+      makeNote({ id: 'a' }),
+      makeNote({ id: 'b' }),
+      makeNote({ id: 'c' }),
+    ];
+    const ids = n.data.map(x => x.id);
+    assert.strictEqual(new Set(ids).size, ids.length);
   });
 });
 

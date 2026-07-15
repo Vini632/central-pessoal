@@ -7,9 +7,8 @@ function setupCalendar() {
   const Calendar = loadModule('js/modules/calendar.js');
   Calendar.data = [];
   Calendar.notified = new Set();
-  // Override DOM-dependent methods to be safe for testing
   Calendar.render = function() {};
-  Calendar.save = function() {}; // Data is scoped inside the vm, not accessible here
+  Calendar.save = function() {};
   Calendar.closeForm = function() {};
   return Calendar;
 }
@@ -19,12 +18,12 @@ describe('Calendar Module', () => {
   before(() => { cal = setupCalendar(); });
 
   describe('getEvents', () => {
-    it('returns empty array when no events match', () => {
+    it('retorna array vazio quando nenhum evento corresponde', () => {
       cal.data = [{ id: '1', title: 'Event', date: '2024-01-15' }];
       assert.strictEqual(cal.getEvents('2024-01-16').length, 0);
     });
 
-    it('returns matching events for a given date', () => {
+    it('retorna eventos correspondentes para uma data', () => {
       cal.data = [
         { id: '1', title: 'A', date: '2024-01-15' },
         { id: '2', title: 'B', date: '2024-01-15' },
@@ -36,20 +35,25 @@ describe('Calendar Module', () => {
       assert.strictEqual(events[1].id, '2');
     });
 
-    it('is case-sensitive for dates', () => {
+    it('retorna array vazio para data sem eventos', () => {
       cal.data = [{ id: '1', title: 'Event', date: '2024-01-15' }];
-      assert.strictEqual(cal.getEvents('2024-01-15').length, 1);
+      assert.strictEqual(cal.getEvents('2025-01-01').length, 0);
+    });
+
+    it('não quebra com data vazia', () => {
+      cal.data = [];
+      assert.strictEqual(cal.getEvents('').length, 0);
     });
   });
 
   describe('Event CRUD logic', () => {
-    it('load initializes data from Data store', () => {
+    it('load inicializa data como array vazio', () => {
       cal.data = [];
       cal.load();
       assert.ok(Array.isArray(cal.data));
     });
 
-    it('filter by id (remove logic) works correctly', () => {
+    it('filtro por id funciona corretamente', () => {
       const data = [
         { id: 'a1', title: 'A', date: '2024-01-15' },
         { id: 'b2', title: 'B', date: '2024-01-16' },
@@ -59,16 +63,16 @@ describe('Calendar Module', () => {
       assert.strictEqual(filtered[0].id, 'b2');
     });
 
-    it('filter by non-existent id returns same array', () => {
+    it('filtro por id inexistente retorna mesmo array', () => {
       const data = [{ id: 'a1', title: 'Test', date: '2024-01-15' }];
       const filtered = data.filter(e => e.id !== 'non_existent');
       assert.strictEqual(filtered.length, 1);
     });
   });
 
-  describe('Month navigation', () => {
-    it('wraps from January to December of previous year', () => {
-      cal.month = 0; // January
+  describe('Navegação de mês', () => {
+    it('envolve de Janeiro para Dezembro do ano anterior', () => {
+      cal.month = 0;
       cal.year = 2024;
       cal.month--;
       if (cal.month < 0) { cal.month = 11; cal.year--; }
@@ -76,8 +80,8 @@ describe('Calendar Module', () => {
       assert.strictEqual(cal.year, 2023);
     });
 
-    it('wraps from December to January of next year', () => {
-      cal.month = 11; // December
+    it('envolve de Dezembro para Janeiro do próximo ano', () => {
+      cal.month = 11;
       cal.year = 2024;
       cal.month++;
       if (cal.month > 11) { cal.month = 0; cal.year++; }
@@ -85,7 +89,7 @@ describe('Calendar Module', () => {
       assert.strictEqual(cal.year, 2025);
     });
 
-    it('can jump to current month', () => {
+    it('pula para o mês atual', () => {
       cal.month = 5;
       cal.year = 2023;
       const now = new Date();
@@ -96,33 +100,45 @@ describe('Calendar Module', () => {
     });
   });
 
-  describe('Date calculations', () => {
-    it('Jan 1 2024 was a Monday (index 1)', () => {
+  describe('Cálculos de data', () => {
+    it('1 Jan 2024 foi Segunda (índice 1)', () => {
       assert.strictEqual(new Date(2024, 0, 1).getDay(), 1);
     });
 
-    it('Feb 2024 (leap year) has 29 days', () => {
+    it('Fev 2024 (ano bissexto) tem 29 dias', () => {
       assert.strictEqual(new Date(2024, 2, 0).getDate(), 29);
     });
 
-    it('Feb 2023 (non-leap) has 28 days', () => {
+    it('Fev 2023 (não bissexto) tem 28 dias', () => {
       assert.strictEqual(new Date(2023, 2, 0).getDate(), 28);
     });
   });
 
-  describe('Notifications', () => {
-    it('notified Set prevents duplicate reminders', () => {
+  describe('Notificações', () => {
+    it('notified Set previne lembretes duplicados', () => {
       cal.notified = new Set(['evt1_2024-01-15']);
-      assert.ok(cal.notified.has('evt1_2024-01-15'));
-      assert.ok(!cal.notified.has('evt2_2024-01-15'));
+      assert.strictEqual(cal.notified.has('evt1_2024-01-15'), true);
+      assert.strictEqual(cal.notified.has('evt2_2024-01-15'), false);
     });
 
-    it('filters events without reminder flag', () => {
+    it('filtra eventos sem flag de lembrete', () => {
       cal.data = [
-        { id: '1', title: 'No reminder', date: '2024-01-15', reminder: 0 },
-        { id: '2', title: 'With reminder', date: '2024-01-15', reminder: 1, reminderTime: '14:00' },
+        { id: '1', title: 'Sem lembrete', date: '2024-01-15', reminder: 0 },
+        { id: '2', title: 'Com lembrete', date: '2024-01-15', reminder: 1, reminderTime: '14:00' },
       ];
       assert.strictEqual(cal.data.filter(e => e.reminder).length, 1);
+    });
+  });
+
+  describe('Event IDs únicos', () => {
+    it('eventos têm IDs únicos', () => {
+      cal.data = [
+        { id: 'e1', title: 'A', date: '2024-01-15' },
+        { id: 'e2', title: 'B', date: '2024-01-16' },
+        { id: 'e3', title: 'C', date: '2024-01-17' },
+      ];
+      const ids = cal.data.map(e => e.id);
+      assert.strictEqual(new Set(ids).size, ids.length);
     });
   });
 });

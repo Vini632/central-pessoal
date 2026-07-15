@@ -6,8 +6,6 @@ const { loadModule } = require('./helpers/load');
 function setupLinks() {
   const Links = loadModule('js/modules/links.js');
   Links.data = [];
-
-  // Override DOM-dependent methods
   Links.render = function() {};
   Links.updateStats = function() {
     if (typeof document !== 'undefined' && document.getElementById) {
@@ -15,7 +13,6 @@ function setupLinks() {
       if (el) el.textContent = this.data.length;
     }
   };
-
   return Links;
 }
 
@@ -28,7 +25,7 @@ describe('Links Module - load', () => {
     assert.strictEqual(l.data.length, 0);
   });
 
-  it('loads does not crash when called multiple times', () => {
+  it('does not crash when called multiple times', () => {
     l.load();
     l.load();
     assert.strictEqual(l.data.length, 0);
@@ -43,7 +40,7 @@ describe('Links Module - save', () => {
     let statsCalled = false;
     l.updateStats = function() { statsCalled = true; };
     l.save();
-    assert.ok(statsCalled);
+    assert.strictEqual(statsCalled, true);
   });
 
   it('does not crash when saving empty data', () => {
@@ -92,13 +89,10 @@ describe('Links Module - delete', () => {
   it('saves after deletion', () => {
     let saved = false;
     const origSave = l.save.bind(l);
-    l.save = function() {
-      saved = true;
-      origSave();
-    };
+    l.save = function() { saved = true; origSave(); };
     l.data = [{ id: 'a', title: 'A', url: 'https://a.com' }];
     l.delete('a');
-    assert.ok(saved);
+    assert.strictEqual(saved, true);
   });
 
   it('renders after deletion', () => {
@@ -106,26 +100,7 @@ describe('Links Module - delete', () => {
     l.render = function() { rendered = true; };
     l.data = [{ id: 'a', title: 'A', url: 'https://a.com' }];
     l.delete('a');
-    assert.ok(rendered);
-  });
-});
-
-describe('Links Module - updateStats', () => {
-  let l;
-  beforeEach(() => { l = setupLinks(); });
-
-  it('updates stat-links with data length', () => {
-    l.data = [
-      { id: 'a', title: 'A', url: 'https://a.com' },
-      { id: 'b', title: 'B', url: 'https://b.com' },
-    ];
-    l.updateStats();
-    // Default document.getElementById returns null, so nothing crashes
-    // We already overrode updateStats to safely handle null
-  });
-
-  it('sets stat-links to 0 when empty', () => {
-    l.updateStats();
+    assert.strictEqual(rendered, true);
   });
 });
 
@@ -139,9 +114,10 @@ describe('Links Module - data integrity', () => {
       { id: 'b', title: 'Google', url: 'https://google.com' },
     ];
     for (const link of l.data) {
-      assert.ok(link.id, `missing id: ${JSON.stringify(link)}`);
-      assert.ok(link.title, `missing title: ${JSON.stringify(link)}`);
-      assert.ok(link.url, `missing url: ${JSON.stringify(link)}`);
+      assert.strictEqual(typeof link.id, 'string');
+      assert.ok(link.id.length > 0);
+      assert.strictEqual(typeof link.title, 'string');
+      assert.strictEqual(typeof link.url, 'string');
     }
   });
 
@@ -155,7 +131,21 @@ describe('Links Module - data integrity', () => {
     assert.strictEqual(new Set(ids).size, ids.length);
   });
 
-  it('links can have empty data array', () => {
+  it('can have empty data array', () => {
     assert.strictEqual(l.data.length, 0);
+  });
+
+  it('handles duplicate IDs by removing all matches', () => {
+    l.data = [
+      { id: 'dup', title: 'First', url: 'https://a.com' },
+      { id: 'dup', title: 'Second', url: 'https://b.com' },
+    ];
+    l.delete('dup');
+    assert.strictEqual(l.data.length, 0);
+  });
+
+  it('supports URLs with special characters', () => {
+    l.data = [{ id: 'a', title: 'Special', url: 'https://example.com/path?q=áéí&b=2' }];
+    assert.strictEqual(l.data[0].url, 'https://example.com/path?q=áéí&b=2');
   });
 });
