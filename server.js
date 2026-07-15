@@ -770,6 +770,82 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // API: Escrita — criar arquivo
+  if (url === '/api/escrita/create' && req.method === 'POST') {
+    const bookDir = path.join(__dirname, 'Castelo Aurora');
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const { path: filePath } = JSON.parse(body);
+        if (!filePath) { res.writeHead(400); res.end(JSON.stringify({ error: 'path obrigatório' })); return; }
+        const first = filePath.split(/[/\\]/)[0];
+        if (!['capitulos', 'cenas', 'rascunhos'].includes(first)) { res.writeHead(403); res.end(JSON.stringify({ error: 'Só é permitido criar em capitulos, cenas ou rascunhos' })); return; }
+        const resolved = path.resolve(bookDir, filePath);
+        if (!resolved.startsWith(bookDir)) { res.writeHead(403); res.end(JSON.stringify({ error: 'Fora do diretório permitido' })); return; }
+        if (fs.existsSync(resolved)) { res.writeHead(409); res.end(JSON.stringify({ error: 'Arquivo já existe' })); return; }
+        const dir = path.dirname(resolved);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(resolved, '', 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
+    });
+    return;
+  }
+
+  // API: Escrita — rename/mover arquivo
+  if (url === '/api/escrita/rename' && req.method === 'POST') {
+    const bookDir = path.join(__dirname, 'Castelo Aurora');
+    const allowedDirs = ['capitulos', 'cenas', 'rascunhos'];
+    function isAllowed(p) {
+      const first = p.split(/[/\\]/)[0];
+      return allowedDirs.includes(first);
+    }
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const { oldPath, newPath } = JSON.parse(body);
+        if (!oldPath || !newPath) { res.writeHead(400); res.end(JSON.stringify({ error: 'oldPath e newPath obrigatórios' })); return; }
+        if (!isAllowed(oldPath) || !isAllowed(newPath)) { res.writeHead(403); res.end(JSON.stringify({ error: 'Só é permitido renomear em capitulos, cenas ou rascunhos' })); return; }
+        const oldResolved = path.resolve(bookDir, oldPath);
+        const newResolved = path.resolve(bookDir, newPath);
+        if (!oldResolved.startsWith(bookDir) || !newResolved.startsWith(bookDir)) { res.writeHead(403); res.end(JSON.stringify({ error: 'Fora do diretório permitido' })); return; }
+        if (!fs.existsSync(oldResolved)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Arquivo não encontrado' })); return; }
+        const dir = path.dirname(newResolved);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.renameSync(oldResolved, newResolved);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
+    });
+    return;
+  }
+
+  // API: Escrita — deletar arquivo
+  if (url === '/api/escrita/delete' && req.method === 'POST') {
+    const bookDir = path.join(__dirname, 'Castelo Aurora');
+    const allowedDirs = ['capitulos', 'cenas', 'rascunhos'];
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const { path: filePath } = JSON.parse(body);
+        if (!filePath) { res.writeHead(400); res.end(JSON.stringify({ error: 'path obrigatório' })); return; }
+        const first = filePath.split(/[/\\]/)[0];
+        if (!allowedDirs.includes(first)) { res.writeHead(403); res.end(JSON.stringify({ error: 'Só é permitido deletar em capitulos, cenas ou rascunhos' })); return; }
+        const resolved = path.resolve(bookDir, filePath);
+        if (!resolved.startsWith(bookDir)) { res.writeHead(403); res.end(JSON.stringify({ error: 'Fora do diretório permitido' })); return; }
+        if (!fs.existsSync(resolved)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Arquivo não encontrado' })); return; }
+        fs.unlinkSync(resolved);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
+    });
+    return;
+  }
+
   // API: Escrita (ler/escrever arquivos do livro)
   if (url.startsWith('/api/escrita')) {
     const bookDir = path.join(__dirname, 'Castelo Aurora');
@@ -821,7 +897,7 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    // POST: escrever arquivo
+    // POST: escrever arquivo (protegido — só capitulos, cenas, rascunhos)
     if (req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);
@@ -829,6 +905,8 @@ const server = http.createServer((req, res) => {
         try {
           const { path: filePath, content } = JSON.parse(body);
           if (!filePath) { res.writeHead(400); res.end(JSON.stringify({ error: 'path obrigatório' })); return; }
+          const first = filePath.split(/[/\\]/)[0];
+          if (!['capitulos', 'cenas', 'rascunhos'].includes(first)) { res.writeHead(403); res.end(JSON.stringify({ error: 'Só é permitido escrever em capitulos, cenas ou rascunhos' })); return; }
           const resolved = path.resolve(bookDir, filePath);
           if (!resolved.startsWith(bookDir)) {
             res.writeHead(403); res.end(JSON.stringify({ error: 'Fora do diretório permitido' }));

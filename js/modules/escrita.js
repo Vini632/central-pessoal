@@ -22,7 +22,15 @@ const Escrita = {
         </div>
       </div>
       <div id="escrita-body">
-        <div id="escrita-tree"></div>
+        <div id="escrita-tree">
+          <div id="escrita-tree-toolbar">
+            <span style="font-size:12px;font-weight:600;color:var(--text-secondary)">Arquivos</span>
+            <button id="escrita-new-file" class="btn-icon" title="Novo arquivo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+          <div id="escrita-tree-list"></div>
+        </div>
         <div id="escrita-editor">
           <div id="escrita-editor-header">
             <span id="escrita-filename">Nenhum arquivo selecionado</span>
@@ -61,7 +69,8 @@ const Escrita = {
             <button id="escrita-ai-send" class="btn-primary" style="padding:6px 14px;font-size:12px">Enviar</button>
           </div>
         </div>
-      </div>`;
+      </div>
+      <div id="escrita-context-menu" style="display:none"></div>`;
     this.loadTree();
     document.getElementById('escrita-refresh').addEventListener('click', () => this.loadTree());
     document.getElementById('escrita-save').addEventListener('click', () => this.save());
@@ -85,6 +94,8 @@ const Escrita = {
         this._askAi();
       });
     });
+    document.getElementById('escrita-new-file').addEventListener('click', () => this._promptNewFile());
+    document.addEventListener('click', () => this._closeContextMenu());
     this._addKeybindings();
   },
 
@@ -100,15 +111,12 @@ const Escrita = {
     const responseEl = document.getElementById('escrita-ai-response');
     const prompt = input.value.trim();
     if (!prompt || this.aiLoading) return;
-
     this.aiLoading = true;
     document.getElementById('escrita-ai-send').disabled = true;
     input.disabled = true;
     responseEl.innerHTML = '<div class="escrita-ai-thinking">Pensando...</div>';
-
     const textarea = document.getElementById('escrita-textarea');
     const currentText = textarea.style.display !== 'none' ? textarea.value : '';
-
     try {
       const res = await apiFetch('/api/escrita/ai', {
         method: 'POST',
@@ -117,7 +125,6 @@ const Escrita = {
       });
       const data = await res.json();
       if (data.content) {
-        const escaped = data.content.replace(/`/g, '\\`').replace(/\${/g, '\\${');
         responseEl.innerHTML = `<div class="escrita-ai-msg">${marked.parse(data.content)}</div>
           <button class="escrita-ai-insert" onclick="Escrita._insertAi()">Inserir no texto</button>`;
         this._lastResponse = data.content;
@@ -148,6 +155,101 @@ const Escrita = {
     Toast.success('Texto inserido!');
   },
 
+  _promptNewFile(dir) {
+    const name = prompt('Nome do arquivo (ex: capitulo-1.md):');
+    if (!name) return;
+    if (!name.endsWith('.md')) { Toast.error('O arquivo precisa terminar em .md'); return; }
+    const allowed = ['capitulos', 'cenas', 'rascunhos'];
+    const baseDir = dir || (this.currentFile && allowed.includes(this.currentFile.split('/')[0]) ? this.currentFile.split('/')[0] : 'cenas');
+    if (!allowed.includes(baseDir)) { Toast.error('Só pode criar em capitulos, cenas ou rascunhos'); return; }
+    const filePath = baseDir + '/' + name;
+    apiFetch('/api/escrita/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath }),
+    }).then(r => r.json()).then(d => {
+      if (d.ok) { Toast.success('Arquivo criado!'); this.loadTree(); }
+      else Toast.error(d.error || 'Erro ao criar');
+    }).catch(() => Toast.error('Erro ao criar'));
+  },
+
+  async _renameFile(oldPath) {
+    const name = prompt('Novo nome (ex: novo-capitulo.md):', oldPath.split('/').pop());
+    if (!name || name === oldPath.split('/').pop()) return;
+    if (!name.endsWith('.md')) { Toast.error('O arquivo precisa terminar em .md'); return; }
+    const parts = oldPath.split('/');
+    parts[parts.length - 1] = name;
+    const newPath = parts.join('/');
+    const res = await apiFetch('/api/escrita/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPath, newPath }),
+    });
+    const d = await res.json();
+    if (d.ok) { Toast.success('Renomeado!'); this.loadTree(); }
+    else Toast.error(d.error || 'Erro ao renomear');
+  },
+
+  async _deleteFile(filePath) {
+    if (!confirm(`Deletar "${filePath}"?`)) return;
+    const res = await apiFetch('/api/escrita/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      Toast.success('Deletado!');
+      if (this.currentFile === filePath) {
+        this.currentFile = null;
+        document.getElementById('escrita-filename').textContent = 'Nenhum arquivo selecionado';
+        document.getElementById('escrita-textarea').style.display = 'none';
+        document.getElementById('escrita-preview').style.display = 'none';
+        document.getElementById('escrita-empty').style.display = 'flex';
+      }
+      this.loadTree();
+    } else Toast.error(d.error || 'Erro ao deletar');
+  },
+
+  _showContextMenu(e, type, path) {
+    e.preventDefault();
+    e.stopPropagation();
+    this._closeContextMenu();
+    const menu = document.getElementById('escrita-context-menu');
+    let items = '';
+    if (type === 'dir') {
+      if (['capitulos', 'cenas', 'rascunhos'].includes(path.split('/')[0] || path)) {
+        items = `<div class="ctx-item" data-action="newfile" data-path="${path}">+ Novo arquivo</div>`;
+      }
+    } else if (type === 'file') {
+      const dir = path.split('/')[0];
+      if (['capitulos', 'cenas', 'rascunhos'].includes(dir)) {
+        items = `
+          <div class="ctx-item" data-action="rename" data-path="${path}">Renomear</div>
+          <div class="ctx-item" data-action="delete" data-path="${path}" style="color:var(--red)">Deletar</div>`;
+      }
+    }
+    if (!items) { menu.style.display = 'none'; return; }
+    menu.innerHTML = items;
+    menu.style.display = 'block';
+    menu.style.left = Math.min(e.clientX, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(e.clientY, window.innerHeight - 100) + 'px';
+    menu.querySelectorAll('.ctx-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const action = el.dataset.action;
+        const p = el.dataset.path;
+        if (action === 'newfile') this._promptNewFile(p);
+        else if (action === 'rename') this._renameFile(p);
+        else if (action === 'delete') this._deleteFile(p);
+        this._closeContextMenu();
+      });
+    });
+  },
+
+  _closeContextMenu() {
+    document.getElementById('escrita-context-menu').style.display = 'none';
+  },
+
   _addKeybindings() {
     document.addEventListener('keydown', (e) => {
       if (!document.getElementById('mod-escrita').classList.contains('active')) return;
@@ -159,17 +261,25 @@ const Escrita = {
   },
 
   async loadTree() {
-    const treeEl = document.getElementById('escrita-tree');
-    treeEl.innerHTML = '<div style="padding:16px;opacity:0.5">Carregando...</div>';
+    const treeList = document.getElementById('escrita-tree-list');
+    treeList.innerHTML = '<div style="padding:16px;opacity:0.5">Carregando...</div>';
     try {
       const data = await apiFetch('/api/escrita');
       this.tree = data;
-      treeEl.innerHTML = this._renderTree(data);
-      treeEl.querySelectorAll('.tree-item').forEach(item => {
+      treeList.innerHTML = this._renderTree(data);
+      treeList.querySelectorAll('.tree-item').forEach(item => {
         item.addEventListener('click', () => this.openFile(item.dataset.path));
+        item.addEventListener('contextmenu', (e) => this._showContextMenu(e, 'file', item.dataset.path));
+      });
+      treeList.querySelectorAll('.tree-dir-label').forEach(label => {
+        const li = label.closest('.tree-dir');
+        if (li) {
+          const dirPath = li.querySelector('.tree-item')?.dataset?.path || label.textContent.trim();
+          label.addEventListener('contextmenu', (e) => this._showContextMenu(e, 'dir', dirPath));
+        }
       });
     } catch {
-      treeEl.innerHTML = '<div style="padding:16px;color:var(--red)">Erro ao carregar</div>';
+      treeList.innerHTML = '<div style="padding:16px;color:var(--red)">Erro ao carregar</div>';
     }
   },
 
@@ -201,12 +311,10 @@ const Escrita = {
     this.dirty = false;
     document.getElementById('escrita-save').disabled = true;
     document.getElementById('escrita-empty').style.display = 'none';
-
-    const treeEl = document.getElementById('escrita-tree');
-    treeEl.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
-    const sel = treeEl.querySelector(`.tree-item[data-path="${filePath}"]`);
+    const treeList = document.getElementById('escrita-tree-list');
+    treeList.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
+    const sel = treeList.querySelector(`.tree-item[data-path="${filePath}"]`);
     if (sel) sel.classList.add('active');
-
     try {
       const data = await apiFetch(`/api/escrita?path=${encodeURIComponent(filePath)}`);
       document.getElementById('escrita-filename').textContent = filePath;
@@ -257,7 +365,8 @@ const Escrita = {
         if (this.previewMode) this.renderPreview(content);
         Toast.success('Salvo!');
       } else {
-        Toast.error('Erro ao salvar');
+        const d = await res.json();
+        Toast.error(d.error || 'Erro ao salvar');
       }
     } catch {
       Toast.error('Erro ao salvar');
