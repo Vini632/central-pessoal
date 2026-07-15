@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
       game:      () => Game.init(),
       news:      () => News.init(),
       leitura:   () => Leitura.init(),
+      escrita:   () => Escrita.init(),
       bot:       () => Bot.init(),
     };
 

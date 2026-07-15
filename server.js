@@ -681,6 +681,86 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // API: Escrita (ler/escrever arquivos do livro)
+  if (url.startsWith('/api/escrita')) {
+    const bookDir = path.join(__dirname, 'Castelo Aurora');
+    const query = new URL(url, 'http://localhost').searchParams;
+
+    // GET: listar árvore ou ler arquivo
+    if (req.method === 'GET') {
+      const filePath = query.get('path');
+      if (filePath) {
+        // Ler arquivo específico
+        const resolved = path.resolve(bookDir, filePath);
+        if (!resolved.startsWith(bookDir)) {
+          res.writeHead(403); res.end(JSON.stringify({ error: 'Fora do diretório permitido' }));
+          return;
+        }
+        fs.readFile(resolved, 'utf-8', (err, data) => {
+          if (err) {
+            res.writeHead(404); res.end(JSON.stringify({ error: 'Arquivo não encontrado' }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ path: filePath, content: data }));
+        });
+      } else {
+        // Listar árvore de diretórios
+        function listDir(dir, relative) {
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          const children = [];
+          for (const entry of entries) {
+            if (entry.name.startsWith('.')) continue;
+            const fullPath = path.join(dir, entry.name);
+            const relPath = relative ? relative + '/' + entry.name : entry.name;
+            if (entry.isDirectory()) {
+              children.push({ name: entry.name, path: relPath, type: 'dir', children: listDir(fullPath, relPath) });
+            } else if (entry.name.endsWith('.md')) {
+              children.push({ name: entry.name, path: relPath, type: 'file' });
+            }
+          }
+          return children;
+        }
+        try {
+          const tree = { name: 'Castelo Aurora', path: '', type: 'dir', children: listDir(bookDir, '') };
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(tree));
+        } catch (e) {
+          res.writeHead(500); res.end(JSON.stringify({ error: e.message }));
+        }
+      }
+      return;
+    }
+
+    // POST: escrever arquivo
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const { path: filePath, content } = JSON.parse(body);
+          if (!filePath) { res.writeHead(400); res.end(JSON.stringify({ error: 'path obrigatório' })); return; }
+          const resolved = path.resolve(bookDir, filePath);
+          if (!resolved.startsWith(bookDir)) {
+            res.writeHead(403); res.end(JSON.stringify({ error: 'Fora do diretório permitido' }));
+            return;
+          }
+          const dir = path.dirname(resolved);
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(resolved, content, 'utf-8');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400); res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return;
+    }
+
+    res.writeHead(405); res.end(JSON.stringify({ error: 'Método não permitido' }));
+    return;
+  }
+
   // Static files (com proteção contra path traversal)
   let rawPath = url === '/' ? 'index.html' : url.split('?')[0];
   let filePath = path.join(__dirname, rawPath);

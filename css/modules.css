@@ -2064,6 +2064,184 @@
   .game-body { flex-direction: column; }
 }
 
+/* =============== ESCRITA =============== */
+#escrita-body {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+}
+#escrita-tree {
+  width: 240px;
+  min-width: 240px;
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  padding: 8px 0;
+  font-size: 13px;
+}
+#escrita-tree .tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 16px;
+}
+#escrita-tree .tree-list .tree-list {
+  padding-left: 16px;
+}
+#escrita-tree .tree-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: default;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#escrita-tree .tree-dir-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 8px 4px;
+}
+#escrita-tree .tree-item {
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background 0.15s;
+}
+#escrita-tree .tree-item:hover {
+  background: var(--bg-module-hover);
+}
+#escrita-tree .tree-item.active {
+  background: var(--accent);
+  color: #fff;
+}
+#escrita-tree .tree-item.active svg {
+  stroke: #fff;
+}
+#escrita-tree svg {
+  stroke: var(--text-tertiary);
+  flex-shrink: 0;
+}
+#escrita-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+#escrita-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  gap: 12px;
+}
+#escrita-filename {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#escrita-textarea {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  resize: none;
+  padding: 16px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+  min-height: 300px;
+}
+#escrita-preview {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  line-height: 1.7;
+  background: var(--bg-primary);
+}
+#escrita-preview h1 { font-size: 1.6em; margin: 0.5em 0 0.3em; }
+#escrita-preview h2 { font-size: 1.3em; margin: 0.5em 0 0.3em; }
+#escrita-preview h3 { font-size: 1.1em; margin: 0.4em 0 0.2em; }
+#escrita-preview p { margin: 0.5em 0; }
+#escrita-preview ul, #escrita-preview ol { padding-left: 24px; }
+#escrita-preview code {
+  background: var(--bg-module-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+#escrita-preview pre code {
+  display: block;
+  padding: 12px;
+  overflow-x: auto;
+}
+#escrita-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-tertiary);
+  padding: 40px;
+  text-align: center;
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-label input { display: none; }
+.toggle-slider {
+  width: 32px;
+  height: 18px;
+  background: var(--bg-module-hover);
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s;
+}
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  top: 2px;
+  left: 2px;
+  transition: 0.2s;
+}
+.toggle-label input:checked + .toggle-slider {
+  background: var(--accent);
+}
+.toggle-label input:checked + .toggle-slider::after {
+  left: 16px;
+  background: #fff;
+}
+
+@media (max-width: 768px) {
+  #escrita-body { flex-direction: column; }
+  #escrita-tree { width: 100%; min-width: 0; max-height: 200px; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+}
+
 /* =============== SCROLLBAR =============== */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
