@@ -1,41 +1,142 @@
-# 💡 Ideias de Projetos Web
+# Central Pessoal
 
-Este repositório serve como um brainstorm para o próximo grande projeto. Abaixo estão algumas ideias divididas entre jogos web e aplicações mais sérias (porém inovadoras).
+Hub pessoal completo com 16 módulos integrados, IA local via Ollama, terminal WebSocket, PWA, e deploy em nuvem.
 
-## 🎮 Jogos Web
+## Arquitetura
 
-### 1. RPG Incremental (Idle/Clicker RPG)
-- **A ideia:** Um jogo onde o jogador começa derrotando monstros simples e evolui comprando upgrades, recrutando heróis, criando itens (crafting) e explorando masmorras, tudo rodando no navegador. (Exemplo: *Melvor Idle*).
-- **Foco Técnico:** Gerenciamento de estado complexo, lógica de progressão matemática, loop de jogo em JavaScript.
+```
+projeto_sem_ideia/
+├── server.js           # Entry point — carrega server/index.js
+├── server/
+│   ├── index.js        # HTTP server, roteamento, start
+│   ├── db.js           # SQLite init + helpers
+│   ├── middleware.js    # Auth (Bearer token) + rate limiting
+│   ├── ollama.js       # Proxy e gerenciamento do Ollama
+│   ├── routes/
+│   │   ├── api-data.js      # /api/data GET/POST
+│   │   ├── api-habits.js    # /api/habits
+│   │   ├── api-ollama.js    # /api/ollama/*
+│   │   ├── api-settings.js  # /api/settings/* (chaves sensíveis)
+│   │   ├── api-escrita.js   # /api/escrita/* + AI
+│   │   ├── api-ai.js        # /api/ai, /api/search, /api/metadata, /api/fetch
+│   │   ├── api-youtube.js   # /api/youtube/*
+│   │   └── static.js        # Arquivos estáticos (HTML/CSS/JS)
+│   └── ws/
+│       └── terminal.js      # WebSocket do terminal
+├── js/
+│   ├── data.js             # Toast, Modal, Data (localStorage + API)
+│   ├── voice.js            # Web Speech API
+│   ├── main.js             # Boot, navegação, lazy loading
+│   ├── register-modules.js # Namespace window.Central
+│   └── modules/            # 16 módulos (ver abaixo)
+├── css/
+│   ├── base.css            # Design tokens, reset, layout
+│   ├── modules.css         # Estilos de todos os módulos
+│   └── responsive.css      # Breakpoints mobile/tablet
+├── test/
+│   ├── *.test.js           # 399+ testes
+│   └── helpers/load.js     # VM sandbox para testar módulos JS
+└── Castelo Aurora/         # Projeto literário (Escrita)
+    ├── lore/               # Contexto do mundo (só leitura)
+    ├── personagens/        # Fichas de personagens (só leitura)
+    ├── capitulos/          # Capítulos do livro (escrita)
+    ├── cenas/              # Cenas soltas (escrita)
+    └── rascunhos/          # Rascunhos (escrita)
+```
 
-### 2. Dungeon Crawler em Grade 2D
-- **A ideia:** Um RPG clássico por turnos onde o jogador se move em um grid, encontra baús, armadilhas e batalha contra inimigos (estilo roguelike).
-- **Foco Técnico:** Lógica de matrizes/grids, renderização no HTML5 Canvas, algoritmos de geração procedural de mapas.
+## Módulos (JS Frontend — `js/modules/`)
 
-### 3. Card Game (Batalha de Cartas)
-- **A ideia:** Um jogo estilo *Hearthstone* ou *Slay the Spire* super simplificado, onde o jogador monta um deck e luta contra a máquina.
-- **Foco Técnico:** Interface drag-and-drop, animações complexas de ataque/defesa, sistema de regras e turnos.
+| Módulo | Arquivo | Descrição |
+|--------|---------|-----------|
+| Settings | `settings.js` | Tema, backup Drive, chaves de API |
+| Clock | `clock.js` | Relógio, previsão do tempo |
+| News | `news.js` | Leitor de RSS |
+| Notes | `notes.js` | Notas com markdown + imagens |
+| Todo | `todo.js` | Lista de tarefas |
+| Calendar | `calendar.js` | Calendário com eventos |
+| Pomodoro | `pomodoro.js` | Timer foco/pausa |
+| Links | `links.js` | Gerenciador de bookmarks |
+| Habits | `habits.js` | Rastreador de hábitos |
+| Terminal | `terminal.js` | Emulador via WebSocket |
+| Player | `player.js` | YouTube + sons ambientes |
+| AI | `ai.js` | Chat com IA (Ollama/OpenAI) |
+| Game | `game.js` | Jogo Ferreiro (idle/incremental) |
+| Leitura | `leitura.js` | Lista de leitura |
+| Escrita | `escrita.js` | Editor literário com IA |
+| Bot | `bot.js` | Dashboard do bot Discord |
 
-### 4. Gerenciador de Taverna (Tycoon)
-- **A ideia:** O jogador não é o herói, ele é o dono da taverna. Tem que comprar suprimentos, contratar bardos, lidar com brigas e vender poções para os aventureiros.
-- **Foco Técnico:** Economia simulada, gerenciamento de recursos ao longo do tempo, UI/UX focada em dashboards e menus.
+Todos os módulos são registrados em `window.Central` (ex: `Central.Settings`, `Central.AI`).
 
----
+## API REST
 
-## 💼 Aplicações Mais "Sérias" (Mas Inovadoras)
+Todas as rotas `/api/*` requerem `Authorization: Bearer <token>` se `API_TOKEN` estiver configurado.
 
-### 5. Gamificação de Finanças Pessoais ou Hábitos
-- **A ideia:** Um aplicativo de controle de gastos ou de hábitos (como beber água, estudar), mas que funciona como um RPG. Bater suas metas financeiras te dá "XP", gastar com besteira tira vida.
-- **Foco Técnico:** Visualização de dados (gráficos), animações de recompensa, persistência de dados (Banco de dados/LocalStorage).
+| Rota | Métodos | Descrição |
+|------|---------|-----------|
+| `/api/data` | GET, POST | Backup completo dos dados (SQLite) |
+| `/api/habits` | GET, POST | Hábitos e logs |
+| `/api/ollama/status` | GET | Status do Ollama |
+| `/api/ollama/models` | GET | Listar modelos |
+| `/api/ollama/generate` | POST | Gerar texto |
+| `/api/ollama/pull` | POST | Baixar modelo |
+| `/api/ollama/start` | POST | Iniciar Ollama |
+| `/api/ollama/set-url` | POST | URL customizada |
+| `/api/settings/youtubeApiKey` | GET, POST | Chave do YouTube |
+| `/api/settings/driveToken` | GET, POST | Token do Google Drive |
+| `/api/ai/instructions` | GET | Instruções do sistema |
+| `/api/search` | POST | DuckDuckGo |
+| `/api/metadata` | POST | OG metadata |
+| `/api/fetch` | POST | Fetch + strip HTML |
+| `/api/youtube/search` | GET | Buscar vídeos |
+| `/api/youtube/playlist` | GET | Itens de playlist |
+| `/api/youtube/validate` | GET | Validar key |
+| `/api/escrita` | GET, POST | Árvore + ler/escrever |
+| `/api/escrita/create` | POST | Criar arquivo |
+| `/api/escrita/rename` | POST | Renomear |
+| `/api/escrita/delete` | POST | Deletar |
+| `/api/escrita/ai` | POST | Assistente de escrita |
+| `/api/weather` | GET | Previsão do tempo |
+| `/api/stats` | GET | Estatísticas agregadas |
+| `/api/bot/*` | GET, POST | Proxy Discord |
+| `/api/pentest` | POST | Pentest de URL |
 
-### 6. Plataforma para RPG de Mesa (Virtual Tabletop Leve)
-- **A ideia:** Um site focado em ajudar mestres e jogadores de RPG (como D&D). Pode ter rolador de dados 3D com física, fichas de personagens interativas que calculam os bônus sozinhas, e geradores de NPCs.
-- **Foco Técnico:** Interatividade em tempo real (WebSockets), possível uso de WebGL/Three.js para dados 3D, formulários dinâmicos.
+## Como Rodar
 
-### 7. Portfólio Interativo / Sistema Operacional Web
-- **A ideia:** Em vez de um site comum, um site que simula o Windows 98, um terminal hacker, ou até mesmo um quarto 3D interativo onde clicar nos objetos abre seus projetos.
-- **Foco Técnico:** CSS avançado, animações, manipulação extrema da DOM para simular janelas ou ambientes.
+```bash
+# Instalar dependências
+npm install
 
-### 8. Dashboard de Análise (Focado no Visual)
-- **A ideia:** Consumir uma API pública interessante (espaço da NASA, clima, criptomoedas) e construir um dashboard futurista e responsivo.
-- **Foco Técnico:** Consumo de APIs REST/GraphQL, design avançado (Dark Mode, Glassmorphism), bibliotecas de gráficos (Chart.js, Recharts).
+# Criar .env (opcional)
+echo API_TOKEN=sua_chave_aqui > .env
+echo DISABLE_OLLAMA=true >> .env
+
+# Iniciar
+npm start
+# ou: node server.js
+```
+
+Acessar: `http://localhost:3456`
+
+### Testes
+
+```bash
+npm test
+# 399+ testes, 15 suites
+```
+
+## Deploy
+
+- **Docker**: `docker build -t central-pessoal . && docker run -p 3456:3456 central-pessoal`
+- **fly.io**: `fly deploy`
+- **Railway**: Conectar repositório
+- **Desktop**: `npm run build:exe` (Electron + NSIS installer)
+
+## Stack
+
+- **Backend**: Node.js, better-sqlite3 (WAL mode)
+- **Frontend**: Vanilla JS, CSS custom properties, glassmorphism
+- **IA**: Ollama (local) ou OpenAI-compatible
+- **Terminal**: WebSocket + cmd.exe/bash
+- **Mobile**: Capacitor
+- **Desktop**: Electron
+- **PWA**: Service Worker com cache offline

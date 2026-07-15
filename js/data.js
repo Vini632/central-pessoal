@@ -1,3 +1,5 @@
+window.Central = {};
+
 const Toast = {
   show(message, type = 'info', duration = 3000) {
     let container = document.getElementById('toast-container');
@@ -155,3 +157,7 @@ const Data = {
     }).catch(() => {});
   },
 };
+
+window.Central.Toast = Toast;
+window.Central.Modal = Modal;
+window.Central.Data = Data;

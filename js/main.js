@@ -140,25 +140,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function initModules() {
     // Boot essentials: Settings (theme) + Clock (dashboard)
-    try { Settings.init(); } catch(e) { console.error('Init error: Settings', e); }
-    try { Clock.init(); } catch(e) { console.error('Init error: Clock', e); }
+    try { Central.Settings.init(); } catch(e) { console.error('Init error: Settings', e); }
+    try { Central.Clock.init(); } catch(e) { console.error('Init error: Clock', e); }
 
     // Lazy modules — inited on first navigation via navigateTo()
     lazyModules = {
-      player:    () => Player.init(),
-      ai:        () => AI.init(),
-      notes:     () => Notes.init(),
-      todo:      () => Todo.init(),
-      calendar:  () => Calendar.init(),
-      pomodoro:  () => Pomodoro.init(),
-      links:     () => Links.init(),
-      habits:    () => Habits.init(),
-      terminal:  () => { TerminalModule.init(); },
-      game:      () => Game.init(),
-      news:      () => News.init(),
-      leitura:   () => Leitura.init(),
-      escrita:   () => Escrita.init(),
-      bot:       () => Bot.init(),
+      player:    () => Central.Player.init(),
+      ai:        () => Central.AI.init(),
+      notes:     () => Central.Notes.init(),
+      todo:      () => Central.Todo.init(),
+      calendar:  () => Central.Calendar.init(),
+      pomodoro:  () => Central.Pomodoro.init(),
+      links:     () => Central.Links.init(),
+      habits:    () => Central.Habits.init(),
+      terminal:  () => { Central.TerminalModule.init(); },
+      game:      () => Central.Game.init(),
+      news:      () => Central.News.init(),
+      leitura:   () => Central.Leitura.init(),
+      escrita:   () => Central.Escrita.init(),
+      bot:       () => Central.Bot.init(),
     };
 
     // Sidebar navigation

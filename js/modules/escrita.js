@@ -70,7 +70,8 @@ const Escrita = {
           </div>
         </div>
       </div>
-      <div id="escrita-context-menu" style="display:none"></div>`;
+      <div id="escrita-context-menu" style="display:none"></div>
+      <div id="escrita-dialog-overlay" style="display:none"></div>`;
     this.loadTree();
     document.getElementById('escrita-refresh').addEventListener('click', () => this.loadTree());
     document.getElementById('escrita-save').addEventListener('click', () => this.save());
@@ -156,59 +157,129 @@ const Escrita = {
   },
 
   _promptNewFile(dir) {
-    const name = prompt('Nome do arquivo (ex: capitulo-1.md):');
-    if (!name) return;
-    if (!name.endsWith('.md')) { Toast.error('O arquivo precisa terminar em .md'); return; }
-    const allowed = ['capitulos', 'cenas', 'rascunhos'];
-    const baseDir = dir || (this.currentFile && allowed.includes(this.currentFile.split('/')[0]) ? this.currentFile.split('/')[0] : 'cenas');
-    if (!allowed.includes(baseDir)) { Toast.error('Só pode criar em capitulos, cenas ou rascunhos'); return; }
-    const filePath = baseDir + '/' + name;
-    apiFetch('/api/escrita/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: filePath }),
-    }).then(r => r.json()).then(d => {
-      if (d.ok) { Toast.success('Arquivo criado!'); this.loadTree(); }
-      else Toast.error(d.error || 'Erro ao criar');
-    }).catch(() => Toast.error('Erro ao criar'));
+    this._showFileDialog('Novo Arquivo', dir || 'capitulos', '', (folder, name) => {
+      apiFetch('/api/escrita/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: folder + '/' + name }),
+      }).then(r => r.json()).then(d => {
+        if (d.ok) { Toast.success('Arquivo criado!'); this.loadTree(); }
+        else Toast.error(d.error || 'Erro ao criar');
+      }).catch(() => Toast.error('Erro ao criar'));
+    });
   },
 
   async _renameFile(oldPath) {
-    const name = prompt('Novo nome (ex: novo-capitulo.md):', oldPath.split('/').pop());
-    if (!name || name === oldPath.split('/').pop()) return;
-    if (!name.endsWith('.md')) { Toast.error('O arquivo precisa terminar em .md'); return; }
-    const parts = oldPath.split('/');
-    parts[parts.length - 1] = name;
-    const newPath = parts.join('/');
-    const res = await apiFetch('/api/escrita/rename', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ oldPath, newPath }),
+    const folder = oldPath.split('/').slice(0, -1).join('/');
+    const oldName = oldPath.split('/').pop();
+    this._showFileDialog('Renomear', folder, oldName, (folder, name) => {
+      const newPath = folder + '/' + name;
+      apiFetch('/api/escrita/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPath, newPath }),
+      }).then(r => r.json()).then(d => {
+        if (d.ok) { Toast.success('Renomeado!'); this.loadTree(); }
+        else Toast.error(d.error || 'Erro ao renomear');
+      }).catch(() => Toast.error('Erro ao renomear'));
     });
-    const d = await res.json();
-    if (d.ok) { Toast.success('Renomeado!'); this.loadTree(); }
-    else Toast.error(d.error || 'Erro ao renomear');
   },
 
   async _deleteFile(filePath) {
-    if (!confirm(`Deletar "${filePath}"?`)) return;
-    const res = await apiFetch('/api/escrita/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: filePath }),
+    this._showConfirmDialog(`Deletar "${filePath.split('/').pop()}"?`, () => {
+      apiFetch('/api/escrita/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: filePath }),
+      }).then(r => r.json()).then(d => {
+        if (d.ok) {
+          Toast.success('Deletado!');
+          if (this.currentFile === filePath) {
+            this.currentFile = null;
+            document.getElementById('escrita-filename').textContent = 'Nenhum arquivo selecionado';
+            document.getElementById('escrita-textarea').style.display = 'none';
+            document.getElementById('escrita-preview').style.display = 'none';
+            document.getElementById('escrita-empty').style.display = 'flex';
+          }
+          this.loadTree();
+        } else Toast.error(d.error || 'Erro ao deletar');
+      }).catch(() => Toast.error('Erro ao deletar'));
     });
-    const d = await res.json();
-    if (d.ok) {
-      Toast.success('Deletado!');
-      if (this.currentFile === filePath) {
-        this.currentFile = null;
-        document.getElementById('escrita-filename').textContent = 'Nenhum arquivo selecionado';
-        document.getElementById('escrita-textarea').style.display = 'none';
-        document.getElementById('escrita-preview').style.display = 'none';
-        document.getElementById('escrita-empty').style.display = 'flex';
-      }
-      this.loadTree();
-    } else Toast.error(d.error || 'Erro ao deletar');
+  },
+
+  _showFileDialog(title, defaultFolder, defaultName, onConfirm) {
+    const overlay = document.getElementById('escrita-dialog-overlay');
+    const folders = ['capitulos', 'cenas', 'rascunhos'];
+    const icons = { capitulos: '📖', cenas: '🎬', rascunhos: '✏️' };
+    overlay.innerHTML = `
+      <div class="escrita-dialog" onclick="event.stopPropagation()">
+        <div class="escrita-dialog-header">${title}</div>
+        <div class="escrita-dialog-body">
+          <label class="escrita-dialog-label">Pasta</label>
+          <div class="escrita-dialog-folders">
+            ${folders.map(f => `
+              <button class="escrita-dialog-folder-btn${f === defaultFolder ? ' active' : ''}" data-folder="${f}">
+                <span class="escrita-dialog-folder-icon">${icons[f]}</span>
+                <span>${f}</span>
+              </button>
+            `).join('')}
+          </div>
+          <label class="escrita-dialog-label">Nome do arquivo</label>
+          <div class="escrita-dialog-input-row">
+            <input class="escrita-dialog-input" type="text" value="${defaultName}" placeholder="ex: capitulo-1" autofocus>
+            <span class="escrita-dialog-ext">.md</span>
+          </div>
+        </div>
+        <div class="escrita-dialog-footer">
+          <button class="escrita-dialog-btn escrita-dialog-cancel">Cancelar</button>
+          <button class="escrita-dialog-btn escrita-dialog-confirm">${title === 'Renomear' ? 'Renomear' : 'Criar'}</button>
+        </div>
+      </div>`;
+    overlay.style.display = 'flex';
+
+    let selectedFolder = defaultFolder;
+    overlay.querySelectorAll('.escrita-dialog-folder-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        overlay.querySelectorAll('.escrita-dialog-folder-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedFolder = btn.dataset.folder;
+      });
+    });
+
+    const input = overlay.querySelector('.escrita-dialog-input');
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+
+    overlay.querySelector('.escrita-dialog-cancel').addEventListener('click', () => { overlay.style.display = 'none'; });
+    overlay.querySelector('.escrita-dialog-confirm').addEventListener('click', () => {
+      const name = input.value.trim();
+      if (!name) { Toast.error('Digite um nome'); return; }
+      overlay.style.display = 'none';
+      onConfirm(selectedFolder, name.endsWith('.md') ? name : name + '.md');
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') overlay.querySelector('.escrita-dialog-confirm').click();
+    });
+    overlay.addEventListener('click', () => overlay.style.display = 'none');
+  },
+
+  _showConfirmDialog(msg, onConfirm) {
+    const overlay = document.getElementById('escrita-dialog-overlay');
+    overlay.innerHTML = `
+      <div class="escrita-dialog" onclick="event.stopPropagation()">
+        <div class="escrita-dialog-header">Confirmar</div>
+        <div class="escrita-dialog-body">
+          <p style="margin:0;font-size:14px;color:var(--text-primary)">${msg}</p>
+        </div>
+        <div class="escrita-dialog-footer">
+          <button class="escrita-dialog-btn escrita-dialog-cancel">Cancelar</button>
+          <button class="escrita-dialog-btn escrita-dialog-confirm" style="background:var(--red)">Deletar</button>
+        </div>
+      </div>`;
+    overlay.style.display = 'flex';
+    overlay.querySelector('.escrita-dialog-cancel').addEventListener('click', () => { overlay.style.display = 'none'; });
+    overlay.querySelector('.escrita-dialog-confirm').addEventListener('click', () => { overlay.style.display = 'none'; onConfirm(); });
+    overlay.addEventListener('click', () => overlay.style.display = 'none');
   },
 
   _showContextMenu(e, type, path) {

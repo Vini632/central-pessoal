@@ -2402,3 +2402,131 @@
   background: var(--border-hover);
 }
 
+#escrita-dialog-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(2px);
+  animation: escrita-fade-in 0.15s ease;
+}
+@keyframes escrita-fade-in { from { opacity:0 } to { opacity:1 } }
+.escrita-dialog {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  width: 380px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  animation: escrita-dialog-in 0.2s ease;
+  overflow: hidden;
+}
+@keyframes escrita-dialog-in {
+  from { transform:scale(0.95); opacity:0 }
+  to { transform:scale(1); opacity:1 }
+}
+.escrita-dialog-header {
+  padding: 16px 20px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.escrita-dialog-body {
+  padding: 16px 20px;
+}
+.escrita-dialog-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.escrita-dialog-folders {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.escrita-dialog-folder-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-module);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.escrita-dialog-folder-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--bg-module-hover);
+}
+.escrita-dialog-folder-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.escrita-dialog-folder-icon { font-size: 18px; }
+.escrita-dialog-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.escrita-dialog-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+.escrita-dialog-input:focus {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.escrita-dialog-ext {
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  background: var(--bg-module);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+.escrita-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 20px 16px;
+}
+.escrita-dialog-btn {
+  padding: 7px 18px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.escrita-dialog-btn:hover { opacity: 0.85; }
+.escrita-dialog-cancel {
+  background: var(--bg-module-hover);
+  color: var(--text-secondary);
+}
+.escrita-dialog-confirm {
+  background: var(--accent);
+  color: #fff;
+}
+
