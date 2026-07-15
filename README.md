@@ -1,5 +1,11 @@
 # Central Pessoal
 
+<p align="center">
+  <a href="https://github.com/Vini632/central-pessoal/actions/workflows/ci.yml">
+    <img src="https://github.com/Vini632/central-pessoal/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+</p>
+
 Hub pessoal completo com 16 módulos integrados, IA local via Ollama, terminal WebSocket, PWA, e deploy em nuvem.
 
 ## Arquitetura
@@ -121,7 +127,7 @@ Acessar: `http://localhost:3456`
 
 ```bash
 npm test
-# 399+ testes, 15 suites
+# 434 testes, 106 suites
 ```
 
 ## Deploy

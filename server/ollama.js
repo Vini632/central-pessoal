@@ -30,6 +30,9 @@ function ollamaProxy(reqPath, method, body, res) {
 }
 
 function checkOllama() {
+  if (process.env.DISABLE_OLLAMA) {
+    return Promise.resolve(false);
+  }
   return new Promise((resolve) => {
     const req = http.get(`http://localhost:${OLLAMA_PORT}/api/tags`, (res) => {
       let data = '';

@@ -9,9 +9,13 @@ function handle(req, res, url) {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
     });
-    checkOllama().then((running) => {
-      res.end(JSON.stringify({ running }));
-    });
+    if (process.env.DISABLE_OLLAMA) {
+      res.end(JSON.stringify({ running: false }));
+    } else {
+      checkOllama().then((running) => {
+        res.end(JSON.stringify({ running }));
+      });
+    }
     return true;
   }
 
