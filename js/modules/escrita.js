@@ -3,6 +3,7 @@ const Escrita = {
   currentFile: null,
   previewMode: false,
   dirty: false,
+  aiOpen: false,
   aiLoading: false,
 
   init() {
@@ -14,9 +15,6 @@ const Escrita = {
           Escrita — Castelo Aurora
         </h2>
         <div style="display:flex;gap:8px;align-items:center">
-          <button id="escrita-ai-toggle" class="btn-icon" title="IA de Escrita">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
-          </button>
           <button id="escrita-refresh" class="btn-icon" title="Recarregar árvore">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
           </button>
@@ -41,22 +39,28 @@ const Escrita = {
             <p>Selecione um arquivo na árvore para editar</p>
           </div>
         </div>
-      </div>
-      <div id="escrita-ai-panel" style="display:none">
-        <div id="escrita-ai-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
-          <span>IA de Escrita</span>
-          <div style="margin-left:auto;display:flex;gap:4px">
+        <button id="escrita-ai-fab" title="IA de Escrita">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
+        </button>
+        <div id="escrita-ai-sidebar">
+          <div id="escrita-ai-sidebar-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 014 4c0 1.95-2 3-2 8h-4c0-5-2-6.05-2-8a4 4 0 014-4z"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M11 22h2"/></svg>
+            <span>IA de Escrita</span>
+            <button id="escrita-ai-close" class="btn-icon" style="margin-left:auto">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div id="escrita-ai-quick-row">
             <button class="escrita-ai-quick" data-prompt="Continue esta cena no mesmo estilo e tom">Continuar</button>
-            <button class="escrita-ai-quick" data-prompt="Sugira ideias para o que pode acontecer a seguir">Sugerir</button>
-            <button class="escrita-ai-quick" data-prompt="Revise este texto: aponte problemas de ritmo, diálogo e consistência">Revisar</button>
+            <button class="escrita-ai-quick" data-prompt="Sugira o que pode acontecer a seguir">Sugerir</button>
+            <button class="escrita-ai-quick" data-prompt="Revise este texto: ritmo, dialogo, consistencia">Revisar</button>
+          </div>
+          <div id="escrita-ai-response"></div>
+          <div id="escrita-ai-input-row">
+            <input id="escrita-ai-input" type="text" placeholder="O que a IA deve fazer?" autocomplete="off">
+            <button id="escrita-ai-send" class="btn-primary" style="padding:6px 14px;font-size:12px">Enviar</button>
           </div>
         </div>
-        <div id="escrita-ai-input-row">
-          <input id="escrita-ai-input" type="text" placeholder="O que você quer que a IA faça?" autocomplete="off">
-          <button id="escrita-ai-send" class="btn-primary" style="padding:6px 14px;font-size:12px">Enviar</button>
-        </div>
-        <div id="escrita-ai-response"></div>
       </div>`;
     this.loadTree();
     document.getElementById('escrita-refresh').addEventListener('click', () => this.loadTree());
@@ -69,7 +73,8 @@ const Escrita = {
       this.dirty = true;
       document.getElementById('escrita-save').disabled = false;
     });
-    document.getElementById('escrita-ai-toggle').addEventListener('click', () => this._toggleAi());
+    document.getElementById('escrita-ai-fab').addEventListener('click', () => this._toggleAi());
+    document.getElementById('escrita-ai-close').addEventListener('click', () => this._toggleAi());
     document.getElementById('escrita-ai-send').addEventListener('click', () => this._askAi());
     document.getElementById('escrita-ai-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this._askAi();
@@ -84,17 +89,10 @@ const Escrita = {
   },
 
   _toggleAi() {
-    const panel = document.getElementById('escrita-ai-panel');
-    const editor = document.getElementById('escrita-editor');
-    if (panel.style.display === 'none') {
-      panel.style.display = 'block';
-      editor.style.borderBottom = 'none';
-      editor.style.borderRadius = '8px 8px 0 0';
-    } else {
-      panel.style.display = 'none';
-      editor.style.borderBottom = '';
-      editor.style.borderRadius = '';
-    }
+    this.aiOpen = !this.aiOpen;
+    document.getElementById('escrita-ai-sidebar').classList.toggle('open', this.aiOpen);
+    document.getElementById('escrita-ai-fab').style.display = this.aiOpen ? 'none' : 'flex';
+    if (this.aiOpen) document.getElementById('escrita-ai-input').focus();
   },
 
   async _askAi() {
@@ -118,11 +116,15 @@ const Escrita = {
         body: JSON.stringify({ prompt, currentText }),
       });
       const data = await res.json();
-      responseEl.innerHTML = data.content
-        ? `<div class="escrita-ai-msg">${marked.parse(data.content)}</div>
-           <button class="escrita-ai-insert" onclick="Escrita._insertAi('${data.content.replace(/`/g, '\\`').replace(/'/g, "\\'").replace(/\n/g, '\\n')}')">Inserir no texto</button>`
-        : '<div class="escrita-ai-msg" style="color:var(--red)">Resposta vazia</div>';
-    } catch (e) {
+      if (data.content) {
+        const escaped = data.content.replace(/`/g, '\\`').replace(/\${/g, '\\${');
+        responseEl.innerHTML = `<div class="escrita-ai-msg">${marked.parse(data.content)}</div>
+          <button class="escrita-ai-insert" onclick="Escrita._insertAi()">Inserir no texto</button>`;
+        this._lastResponse = data.content;
+      } else {
+        responseEl.innerHTML = '<div class="escrita-ai-msg" style="color:var(--red)">Resposta vazia</div>';
+      }
+    } catch {
       responseEl.innerHTML = '<div class="escrita-ai-msg" style="color:var(--red)">Erro ao contactar IA</div>';
     }
     this.aiLoading = false;
@@ -131,13 +133,16 @@ const Escrita = {
     input.focus();
   },
 
-  _insertAi(text) {
+  _lastResponse: '',
+
+  _insertAi() {
+    if (!this._lastResponse) return;
     const textarea = document.getElementById('escrita-textarea');
     const start = textarea.selectionStart;
     const before = textarea.value.substring(0, start);
     const after = textarea.value.substring(textarea.selectionEnd);
-    textarea.value = before + text + after;
-    const pos = start + text.length;
+    textarea.value = before + this._lastResponse + after;
+    const pos = start + this._lastResponse.length;
     textarea.selectionStart = textarea.selectionEnd = pos;
     textarea.dispatchEvent(new Event('input'));
     Toast.success('Texto inserido!');
@@ -163,7 +168,7 @@ const Escrita = {
       treeEl.querySelectorAll('.tree-item').forEach(item => {
         item.addEventListener('click', () => this.openFile(item.dataset.path));
       });
-    } catch (e) {
+    } catch {
       treeEl.innerHTML = '<div style="padding:16px;color:var(--red)">Erro ao carregar</div>';
     }
   },
@@ -210,7 +215,7 @@ const Escrita = {
       textarea.style.display = 'block';
       if (this.previewMode) this.renderPreview(data.content || '');
       else document.getElementById('escrita-preview').style.display = 'none';
-    } catch (e) {
+    } catch {
       Toast.error('Erro ao abrir arquivo');
     }
   },
@@ -232,7 +237,7 @@ const Escrita = {
     const preview = document.getElementById('escrita-preview');
     try {
       preview.innerHTML = marked.parse(content || '*Vazio*');
-    } catch (e) {
+    } catch {
       preview.innerHTML = '<p style="color:var(--red)">Erro ao renderizar preview</p>';
     }
   },
@@ -254,7 +259,7 @@ const Escrita = {
       } else {
         Toast.error('Erro ao salvar');
       }
-    } catch (e) {
+    } catch {
       Toast.error('Erro ao salvar');
     }
   },

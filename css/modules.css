@@ -2242,32 +2242,70 @@
   #escrita-tree { width: 100%; min-width: 0; max-height: 200px; border-right: none; border-bottom: 1px solid var(--border-subtle); }
 }
 
-/* =============== ESCRITA — IA PANEL =============== */
-#escrita-ai-panel {
-  border: 1px solid var(--border-subtle);
-  border-top: none;
-  border-radius: 0 0 8px 8px;
+/* =============== ESCRITA — IA FAB + SIDEBAR =============== */
+#escrita-editor { position: relative; }
+#escrita-ai-fab {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  transition: 0.2s;
+  z-index: 10;
+}
+#escrita-ai-fab:hover {
+  transform: scale(1.1);
+  opacity: 0.9;
+}
+#escrita-ai-sidebar {
+  position: absolute;
+  top: 0;
+  right: -360px;
+  width: 340px;
+  height: 100%;
   background: var(--bg-elevated);
+  border-left: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  max-height: 300px;
+  transition: right 0.25s ease;
+  z-index: 20;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.15);
 }
-#escrita-ai-header {
+#escrita-ai-sidebar.open {
+  right: 0;
+}
+#escrita-ai-sidebar-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
+  padding: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-primary);
 }
+#escrita-ai-quick-row {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
 .escrita-ai-quick {
   background: var(--bg-module-hover);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
-  padding: 3px 10px;
+  padding: 4px 10px;
   font-size: 11px;
   color: var(--text-secondary);
   cursor: pointer;
@@ -2278,11 +2316,38 @@
   color: #fff;
   border-color: var(--accent);
 }
+#escrita-ai-response {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 0;
+}
+.escrita-ai-thinking {
+  color: var(--text-tertiary);
+  font-style: italic;
+  font-size: 12px;
+}
+.escrita-ai-msg { color: var(--text-primary); }
+.escrita-ai-msg p { margin: 0.4em 0; }
+.escrita-ai-msg ul, .escrita-ai-msg ol { padding-left: 20px; }
+.escrita-ai-insert {
+  margin-top: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.escrita-ai-insert:hover { opacity: 0.85; }
 #escrita-ai-input-row {
   display: flex;
   gap: 6px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-subtle);
 }
 #escrita-ai-input {
   flex: 1;
@@ -2294,39 +2359,7 @@
   font-size: 13px;
   outline: none;
 }
-#escrita-ai-input:focus {
-  border-color: var(--accent);
-}
-#escrita-ai-response {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.6;
-  min-height: 60px;
-}
-.escrita-ai-thinking {
-  color: var(--text-tertiary);
-  font-style: italic;
-  font-size: 12px;
-}
-.escrita-ai-msg {
-  color: var(--text-primary);
-}
-.escrita-ai-msg p { margin: 0.4em 0; }
-.escrita-ai-insert {
-  margin-top: 8px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 12px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.escrita-ai-insert:hover {
-  opacity: 0.85;
-}
+#escrita-ai-input:focus { border-color: var(--accent); }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {

@@ -681,14 +681,31 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API: Escrita — IA (assistente de escrita via Ollama)
-  if (url === '/api/escrita/ai' && req.method === 'POST') {
+  // API: Escrita — IA (assistente de escrita com contexto do livro)
+  if (url === '/api/escrita/ai') {
+    if (req.method !== 'POST') { res.writeHead(405); res.end(JSON.stringify({ error: 'Método não permitido' })); return; }
+
     const instrucoesPath = path.join(__dirname, 'IA_ESCRITA_INSTRUCOES.md');
     let systemPrompt = 'Você é uma assistente de escrita criativa.';
     try { systemPrompt = fs.readFileSync(instrucoesPath, 'utf-8'); } catch {}
 
-    const aiUrl = process.env.OLLAMA_URL || `http://localhost:${OLLAMA_PORT}`;
-    const model = process.env.ESCRITA_MODEL || 'llama3:latest';
+    // Carregar automaticamente contexto da pasta Castelo Aurora
+    const bookDir = path.join(__dirname, 'Castelo Aurora');
+    const contextFiles = [
+      'lore/mundo.md',
+      'lore/castelo-aurora.md',
+      'lore/sistema-escolar.md',
+      'personagens/os-cinco-representantes.md',
+      'personagens/protagonista.md',
+      'personagens/heroina.md',
+    ];
+    let bookContext = '';
+    for (const file of contextFiles) {
+      try {
+        const content = fs.readFileSync(path.join(bookDir, file), 'utf-8');
+        bookContext += `\n=== ${file} ===\n${content.slice(0, 3000)}\n`;
+      } catch {}
+    }
 
     let body = '';
     req.on('data', c => body += c);
@@ -697,9 +714,16 @@ const server = http.createServer((req, res) => {
         const { prompt, currentText } = JSON.parse(body);
         if (!prompt) { res.writeHead(400); res.end(JSON.stringify({ error: 'prompt obrigatório' })); return; }
 
-        const fullPrompt = currentText
-          ? `Contexto (texto atual do usuário):\n${currentText.slice(-4000)}\n\n---\n\nInstrução do usuário: ${prompt}`
-          : prompt;
+        if (process.env.DISABLE_OLLAMA) {
+          res.writeHead(502); res.end(JSON.stringify({ error: 'Ollama desabilitado' }));
+          return;
+        }
+
+        const fullPrompt = [
+          bookContext ? `## Contexto do Mundo (Castelo Aurora)\n${bookContext.slice(0, 8000)}\n` : '',
+          currentText ? `## Texto atual do usuário\n${currentText.slice(-4000)}\n` : '',
+          `## Instrução do usuário\n${prompt}`,
+        ].filter(Boolean).join('\n\n');
 
         const payload = JSON.stringify({
           model,
@@ -716,7 +740,7 @@ const server = http.createServer((req, res) => {
           path: '/api/generate',
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          timeout: 30000,
+          timeout: 8000,
         };
 
         const ollamaReq = http.request(options, (ollamaRes) => {
@@ -736,6 +760,7 @@ const server = http.createServer((req, res) => {
         ollamaReq.on('error', (e) => {
           res.writeHead(502); res.end(JSON.stringify({ error: e.message }));
         });
+        ollamaReq.setTimeout(8000, () => { ollamaReq.destroy(); try { res.writeHead(502); res.end(JSON.stringify({ error: 'Timeout da IA' })); } catch {} });
         ollamaReq.write(payload);
         ollamaReq.end();
       } catch (e) {
