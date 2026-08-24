@@ -52,20 +52,48 @@ Unregister-ScheduledTask -TaskName CentralPessoal   # remover
 
 Expõe o servidor local na internet sem abrir porta no roteador e com TLS automático.
 
-**URL temporária** (sem conta, muda a cada reinício):
+### URL estável (recomendado) — túnel nomeado, sem domínio próprio
+
+O túnel nomeado já cria um subdomínio fixo `https://<UUID>.cfargotunnel.com` que **não muda ao reiniciar**. Não precisa de domínio próprio.
+
 ```powershell
 winget install Cloudflare.cloudflared
+cloudflared login            # abre o navegador -> conta Cloudflare free (sem cartao)
+cloudflared tunnel create central
+cloudflared tunnel list      # copie o UUID gerado
+```
+
+Crie `C:\Users\<usuario>\.cloudflared\config.yml`:
+```yaml
+url: http://localhost:3456
+tunnel: <UUID>
+credentials-file: C:\Users\<usuario>\.cloudflared\<UUID>.json
+```
+
+Suba o túnel:
+```powershell
+cloudflared tunnel run central
+```
+Acesse `https://<UUID>.cfargotunnel.com`.
+
+> Se o `cloudflared login` pedir um domínio e você não tiver um: crie uma conta **Cloudflare Zero Trust** (free, não exige domínio) ou adicione um domínio gratuito (`eu.org`) na Cloudflare.
+
+### Deixar o túnel 24/7 (sem janela de terminal)
+
+Agende como tarefa no logon do usuário (espelha o serviço do app):
+```powershell
+$action = New-ScheduledTaskAction -Execute "cloudflared" -Argument "tunnel run central"
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+Register-ScheduledTask -TaskName CentralTunnel -Action $action -Trigger $trigger -Force
+Start-ScheduledTask -TaskName CentralTunnel
+```
+
+### URL temporária (sem conta, muda a cada reinício)
+```powershell
 cloudflared tunnel --url http://localhost:3456
 ```
 Use a URL `https://*.trycloudflare.com` exibida.
 
-**URL estável** (conta Cloudflare gratuita, sem cartão):
-```powershell
-cloudflared login            # autentica no navegador
-cloudflared tunnel create central
-cloudflared tunnel route dns central central.<seu-dominio-ou-sub>.trycloudflare.com
-cloudflared tunnel run --url http://localhost:3456 central
-```
 Mais detalhes: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
 
 > O terminal WebSocket (`/terminal`) exige `API_TOKEN`. Use sempre um token forte em produção.
