@@ -21,9 +21,35 @@ Variáveis de ambiente (veja `.env.example`):
 | `OLLAMA_URL` / `OLLAMA_MODEL` / `ESCRITA_MODEL` | Configuração do Ollama | — |
 | `YOUTUBE_API_KEY` / `DRIVE_TOKEN` | APIs externas | — |
 
-## Deploy 24/7 — Oracle Cloud Free (Always Free)
+## Deploy 24/7 — Koyeb (nuvem free, sem cartão)
 
-Opção 100% gratuita e realmente 24/7 (VM Ampere ARM, 4 cores, 24 GB RAM, 10 TB/mês).
+Opção 100% gratuita **sem cartão de crédito** e 24/7 de verdade (2 serviços, 512 MB RAM por serviço). Usa o `Dockerfile` do projeto.
+
+> ⚠️ O free tier do Koyeb tem **storage efêmero**: o SQLite (`/data/central.db`) é recriado se o container reiniciar. A maior parte dos dados (notas, hábitos, etc.) fica no `localStorage` do navegador, então o impacto é pequeno. Para persistência total, anexe um Volume ao serviço.
+
+### 1. Criar o serviço (Dashboard Koyeb)
+1. Acesse **app.koyeb.com** → crie conta (sem cartão)
+2. **Create App → Deploy from GitHub** → escolha o repo `central-pessoal`
+3. Builder: **Dockerfile** (usa o `Dockerfile` na raiz)
+4. Port: `3456`
+5. **Environment variables** (opcional mas recomendado):
+   - `API_TOKEN` = um token forte (ex.: `openssl rand -hex 32`)
+   - `DISABLE_OLLAMA` = `true`
+6. **Deploy**
+
+O Koyeb injeta `PORT` em runtime (nosso servidor já lê `process.env.PORT`), então funciona automaticamente. A URL pública aparece no dashboard (ex.: `https://seu-app.koyeb.app`).
+
+### 2. Atualizar depois
+A cada push no `master`, o Koyeb re-builda e re-deploya automaticamente (se habilitado o auto-deploy). Para forçar: botão **Redeploy** no dashboard.
+
+### 3. Persistir o banco (opcional)
+Em **Volumes**, crie um volume e monte em `/data` no serviço. O `DB_PATH` já aponta para `/data/central.db`.
+
+---
+
+## Deploy 24/7 — Oracle Cloud Free (Always Free, requer cartão)
+
+Opção 100% gratuita e realmente 24/7 (VM Ampere ARM, 4 cores, 24 GB RAM, 10 TB/mês). **Requer cartão de crédito** na criação da conta (não cobra no free tier).
 
 ### 1. Criar a instância (Oracle Cloud Console)
 - **Menu → Compute → Instances → Create instance**
