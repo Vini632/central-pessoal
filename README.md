@@ -21,6 +21,57 @@ Variáveis de ambiente (veja `.env.example`):
 | `OLLAMA_URL` / `OLLAMA_MODEL` / `ESCRITA_MODEL` | Configuração do Ollama | — |
 | `YOUTUBE_API_KEY` / `DRIVE_TOKEN` | APIs externas | — |
 
+## Deploy 24/7 — Windows Service (sem cartão, sem nuvem)
+
+Ideal para rodar 24/7 na sua própria máquina, sem pagar nada e sem host externo. O servidor sobe sozinho no logon e reinicia se cair.
+
+> ⚠️ Use um caminho **fora do OneDrive** se quiser rodar como SYSTEM/startup. O script atual usa gatilho **no logon do usuário**, o que funciona mesmo dentro do OneDrive.
+
+### 1. Criar o serviço
+```powershell
+pwsh deploy/setup-windows-service.ps1
+```
+O script:
+- gera um `.env` com `API_TOKEN` forte e `DISABLE_OLLAMA=true` (se não existir)
+- cria a tarefa agendada `CentralPessoal` (inicia no logon, reinicia em falha)
+- já inicia o servidor
+
+Acesse `http://localhost:3456`.
+
+### 2. Gerenciar
+```powershell
+Get-ScheduledTask -TaskName CentralPessoal          # status
+Stop-ScheduledTask  -TaskName CentralPessoal        # parar
+Start-ScheduledTask -TaskName CentralPessoal        # iniciar
+Unregister-ScheduledTask -TaskName CentralPessoal   # remover
+```
+
+---
+
+## Acesso de fora (Cloudflare Tunnel, grátis, sem cartão)
+
+Expõe o servidor local na internet sem abrir porta no roteador e com TLS automático.
+
+**URL temporária** (sem conta, muda a cada reinício):
+```powershell
+winget install Cloudflare.cloudflared
+cloudflared tunnel --url http://localhost:3456
+```
+Use a URL `https://*.trycloudflare.com` exibida.
+
+**URL estável** (conta Cloudflare gratuita, sem cartão):
+```powershell
+cloudflared login            # autentica no navegador
+cloudflared tunnel create central
+cloudflared tunnel route dns central central.<seu-dominio-ou-sub>.trycloudflare.com
+cloudflared tunnel run --url http://localhost:3456 central
+```
+Mais detalhes: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+
+> O terminal WebSocket (`/terminal`) exige `API_TOKEN`. Use sempre um token forte em produção.
+
+---
+
 ## Deploy 24/7 — Koyeb (nuvem free, sem cartão)
 
 Opção 100% gratuita **sem cartão de crédito** e 24/7 de verdade (2 serviços, 512 MB RAM por serviço). Usa o `Dockerfile` do projeto.
