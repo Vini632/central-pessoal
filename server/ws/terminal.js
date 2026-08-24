@@ -18,7 +18,9 @@ function setup(server) {
   });
 
   wss.on("connection", (ws) => {
-    const shell = spawn("cmd.exe", [], {
+    const shellCmd = process.platform === "win32" ? "cmd.exe" : (process.env.SHELL || "/bin/bash");
+    const shellArgs = process.platform === "win32" ? [] : ["-l"];
+    const shell = spawn(shellCmd, shellArgs, {
       stdio: ["pipe", "pipe", "pipe"],
       env: { ...process.env, TERM: "xterm-256color" },
     });

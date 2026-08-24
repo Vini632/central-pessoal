@@ -1,0 +1,19 @@
+services:
+  central:
+    build: .
+    image: central-pessoal:latest
+    container_name: central-pessoal
+    restart: unless-stopped
+    ports:
+      - "3456:3456"
+    environment:
+      - PORT=3456
+      - DB_PATH=/data/central.db
+      - DISABLE_OLLAMA=${DISABLE_OLLAMA:-true}
+      - API_TOKEN=${API_TOKEN}
+      - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
+    volumes:
+      - central-data:/data
+
+volumes:
+  central-data:
